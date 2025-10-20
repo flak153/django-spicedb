@@ -8,8 +8,9 @@ This gives us something executable for unit tests while the broader design in
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Mapping, MutableMapping
+from typing import Dict, Iterable, Mapping, MutableMapping, Set
 
 
 class TypeGraphError(ValueError):
@@ -36,12 +37,21 @@ class TypeConfig:
     relations: Mapping[str, str] = field(default_factory=dict)
     permissions: Mapping[str, str] = field(default_factory=dict)
     parents: Iterable[str] = field(default_factory=tuple)
+    bindings: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
+
+
+_PERMISSION_TOKEN_DELIMS = re.compile(r"[|&()!]")
+_PERMISSION_ARROW = re.compile(r"->")
 
 
 class TypeGraph:
     """Registry of ``TypeConfig`` objects with lightweight validation."""
 
-    def __init__(self, types: Mapping[str, Mapping[str, object]] | None = None) -> None:
+    ALLOWED_BINDING_KINDS: Set[str] = frozenset({"fk", "m2m", "through", "manual"})
+
+    def __init__(
+        self, types: Mapping[str, Mapping[str, object]] | None = None
+    ) -> None:
         self._raw: Dict[str, Mapping[str, object]] = dict(types or {})
         self._types: Dict[str, TypeConfig] = {}
         self._build()
@@ -83,10 +93,13 @@ class TypeGraph:
                 relations=self._extract_section(raw_cfg, "relations"),
                 permissions=self._extract_section(raw_cfg, "permissions"),
                 parents=tuple(self._extract_iterable(raw_cfg, "parents")),
+                bindings=self._extract_bindings(raw_cfg),
             )
         self._validate_parents()
+        self._validate_parent_cycles()
         self._validate_relation_subjects()
         self._validate_permission_expressions()
+        self._validate_bindings()
 
     @staticmethod
     def _extract_section(
@@ -102,6 +115,49 @@ class TypeGraph:
             if not isinstance(k, str) or not isinstance(v, str):
                 raise TypeGraphError(f"{key!r} entries must be string → string.")
             result[k] = v
+        return result
+
+    def _extract_bindings(
+        self, cfg: Mapping[str, object], key: str = "bindings"
+    ) -> MutableMapping[str, MutableMapping[str, str]]:
+        section = cfg.get(key, {})
+        if not section:
+            return {}
+        if not isinstance(section, Mapping):
+            raise TypeGraphError(f"{key!r} must be a mapping.")
+        result: Dict[str, MutableMapping[str, str]] = {}
+        for relation, binding in section.items():
+            if not isinstance(relation, str):
+                raise TypeGraphError(f"{key!r} keys must be strings.")
+            if not isinstance(binding, Mapping):
+                raise TypeGraphError(
+                    f"{key!r}.{relation} must be a mapping with field/kind."
+                )
+            try:
+                field_name = binding["field"]
+                kind = binding["kind"]
+            except KeyError as exc:
+                raise TypeGraphError(
+                    f"{key!r}.{relation} missing required key {exc.args[0]!r}"
+                ) from exc
+            if not isinstance(field_name, str) or not isinstance(kind, str):
+                raise TypeGraphError(
+                    f"{key!r}.{relation} field/kind must be strings."
+                )
+            lower_kind = kind.lower()
+            if lower_kind not in self.ALLOWED_BINDING_KINDS:
+                raise TypeGraphError(
+                    f"{key!r}.{relation} uses unsupported kind {kind!r}."
+                )
+            result[relation] = {
+                "field": field_name,
+                "kind": lower_kind,
+                **{
+                    attr: value
+                    for attr, value in binding.items()
+                    if attr not in {"field", "kind"}
+                },
+            }
         return result
 
     @staticmethod
@@ -123,6 +179,25 @@ class TypeGraph:
                     raise UnknownParentError(
                         f"type {cfg.name!r} references unknown parent {parent!r}"
                     )
+
+    def _validate_parent_cycles(self) -> None:
+        visited: Set[str] = set()
+        stack: Set[str] = set()
+
+        def dfs(node: str) -> None:
+            if node in stack:
+                raise TypeGraphError(f"parent cycle detected at type {node!r}")
+            if node in visited:
+                return
+            stack.add(node)
+            for parent in self._types[node].parents:
+                dfs(parent)
+            stack.remove(node)
+            visited.add(node)
+
+        for name in self._types:
+            if name not in visited:
+                dfs(name)
 
     def _validate_relation_subjects(self) -> None:
         known_types = set(self._types.keys())
@@ -148,17 +223,20 @@ class TypeGraph:
                             f"{token!r}"
                         )
 
+    def _validate_bindings(self) -> None:
+        for cfg in self._types.values():
+            if not cfg.bindings:
+                continue
+            for relation_name in cfg.bindings.keys():
+                if relation_name not in cfg.relations:
+                    raise TypeGraphError(
+                        f"binding for {cfg.name}.{relation_name} "
+                        "must target a defined relation."
+                    )
+
     @staticmethod
     def _tokenize_expression(expression: str) -> Iterable[str]:
-        token = []
-        for char in expression:
-            if char.isalnum() or char in {"_", "-", ">"}:
-                token.append(char)
-                continue
-            if token:
-                yield "".join(token)
-                token.clear()
-            if not char.isspace():
-                yield char
-        if token:
-            yield "".join(token)
+        without_arrow = _PERMISSION_ARROW.sub(" ", expression)
+        cleaned = _PERMISSION_TOKEN_DELIMS.sub(" ", without_arrow)
+        for candidate in cleaned.split():
+            yield candidate.strip()
