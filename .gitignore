@@ -1,0 +1,21 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+env/
+
+# IDE / editor cruft
+.idea/
+.vscode/
+
+# Local databases
+db.sqlite3
+spicedb/
+
+# Poetry files
+poetry.lock.bak
+
+# Docker
+*.pid
