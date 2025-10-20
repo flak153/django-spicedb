@@ -21,10 +21,10 @@ def get_type_graph() -> TypeGraph:
         return _TYPE_GRAPH_CACHE
 
     config = _get_rebac_settings()
-    types_config = config.get("types")
+    types_config = _collect_type_configs(config)
 
-    if not isinstance(types_config, Mapping) or not types_config:
-        raise ImproperlyConfigured("settings.REBAC['types'] must be a non-empty mapping.")
+    if not types_config:
+        raise ImproperlyConfigured("No type definitions available for TypeGraph.")
 
     graph = TypeGraph(types_config)
     _TYPE_GRAPH_CACHE = graph
@@ -45,3 +45,27 @@ def _get_rebac_settings() -> MutableMapping[str, Any]:
     if not isinstance(value, MutableMapping):
         raise ImproperlyConfigured("settings.REBAC must be a mapping.")
     return value
+
+
+def _collect_type_configs(config: Mapping[str, Any]) -> MutableMapping[str, Any]:
+    base_types = config.get("types")
+    if base_types is None:
+        base_types = {}
+    if not isinstance(base_types, Mapping):
+        raise ImproperlyConfigured("settings.REBAC['types'] must be a mapping.")
+
+    merged: MutableMapping[str, Any] = {}
+    for name, value in base_types.items():
+        if not isinstance(value, Mapping):
+            raise ImproperlyConfigured(
+                f"settings.REBAC['types'][{name!r}] must be a mapping."
+            )
+        merged[name] = dict(value)
+
+    if config.get("db_overrides"):
+        from django_rebac.models import TypeDefinition
+
+        for type_def in TypeDefinition.objects.filter(is_active=True):
+            merged[type_def.name] = type_def.as_dict()
+
+    return merged

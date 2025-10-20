@@ -1,9 +1,4 @@
-"""Core package for django-spicedb.
-
-The initial scaffolding keeps the public surface minimal while we grow the
-planned abstractions.  Modules that need to be public should import their
-symbols here once they stabilise.
-"""
+"""Core package for django-spicedb."""
 
 from .types.graph import TypeGraph
 
