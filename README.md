@@ -93,14 +93,9 @@ Shadow mode is the default: decisions are logged but not enforced until toggled 
 ---
 
 ## Local development guide
-- **Run tests**
+- **Run tests** (requires Docker; the suite will start SpiceDB via `docker compose` and skips integration cases if the daemon is unavailable)
   ```bash
   poetry run pytest
-  ```
-- **Integration tests** (SpiceDB required; suite lands with TupleSync)  
-  ```bash
-  docker compose up -d spicedb
-  poetry run pytest tests/integration
   ```
 - **Lint / type check** (planned additions)  
   ```bash
@@ -142,7 +137,7 @@ See [`planning.md`](planning.md) for full precedence rules, feature flags, and H
 ## Current status snapshot (WIP)
 - ✅ Initial `TypeGraph` class with validation + toy schema compiler.
 - ✅ `docker-compose.yaml` for SpiceDB + Postgres.
-- ✅ Basic unit tests (`python -m unittest discover`).
+- ✅ Pytest suite with SpiceDB-backed integration coverage (auto-starts via Docker Compose).
 - 🔜 TupleSync models, admin explorer, DRF/ORM integrations, publish/backfill commands, observability stack.
 
 This project is actively evolving—follow the roadmap and feel free to contribute!

@@ -6,9 +6,11 @@ authors = [
     {name = "Mohammed R. Ali",email = "flakgun153@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4"
 dependencies = [
-    "django (>=5.2.7,<6.0.0)"
+    "django (>=5.2.7,<6.0.0)",
+    "authzed (>=1.23.0,<2.0.0)",
+    "grpcio (>=1.75.1,<2.0.0)"
 ]
 
 [tool.poetry]
