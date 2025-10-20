@@ -23,6 +23,28 @@ def _ensure_stack() -> None:
         raise RuntimeError(_STACK_ERROR)
     try:
         subprocess.run(
+            ["docker", "compose", "up", "-d", "spicedb-db"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "run",
+                "--rm",
+                "spicedb",
+                "migrate",
+                "head",
+                "--datastore-engine",
+                "postgres",
+                "--datastore-conn-uri",
+                "postgres://spicedb:spicedb@spicedb-db:5432/spicedb?sslmode=disable",
+            ],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
             ["docker", "compose", "up", "-d", "spicedb"],
             check=True,
             capture_output=True,

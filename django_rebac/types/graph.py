@@ -69,21 +69,22 @@ class TypeGraph:
         sections: list[str] = []
         for name in sorted(self._types):
             cfg = self._types[name]
-            lines: list[str] = [f"type {cfg.name}"]
-            if cfg.relations:
-                lines.append("  relations")
-                for rel_name, subject in sorted(cfg.relations.items()):
-                    lines.append(f"    define {rel_name}: {subject}")
-            if cfg.permissions:
-                lines.append("  permissions")
-                for perm_name, expression in sorted(cfg.permissions.items()):
-                    lines.append(f"    define {perm_name}: {expression}")
+            lines: list[str] = [f"definition {cfg.name} {{"]
+
+            for rel_name, subject in sorted(cfg.relations.items()):
+                lines.append(f"  relation {rel_name}: {subject}")
+
+            for perm_name, expression in sorted(cfg.permissions.items()):
+                lines.append(f"  permission {perm_name} = {expression}")
+
             if cfg.parents:
-                lines.append("  parents")
-                for parent in sorted(cfg.parents):
-                    lines.append(f"    {parent}")
+                parents_comment = ", ".join(sorted(cfg.parents))
+                lines.append(f"  # parents: {parents_comment}")
+
+            lines.append("}")
             sections.append("\n".join(lines))
-        return "\n\n".join(sections)
+
+        return "\n\n".join(sections) + ("\n" if sections else "")
 
     # ------------------------------------------------------------------ internals
     def _build(self) -> None:

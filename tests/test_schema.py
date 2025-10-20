@@ -15,5 +15,5 @@ def test_compile_schema_returns_digest() -> None:
 
     schema, digest = compile_schema(graph)
 
-    assert schema.startswith("type doc")
+    assert schema.startswith("definition doc")
     assert len(digest) == 64

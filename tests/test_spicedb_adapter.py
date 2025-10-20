@@ -41,6 +41,7 @@ def test_write_check_and_delete(spicedb_adapter, ensure_schema) -> None:
         subject=f"user:{user_id}",
         relation="view",
         object_=f"document:{doc_id}",
+        consistency="fully_consistent",
     )
 
     resources = list(
@@ -48,6 +49,7 @@ def test_write_check_and_delete(spicedb_adapter, ensure_schema) -> None:
             subject=f"user:{user_id}",
             relation="view",
             resource_type="document",
+            consistency="fully_consistent",
         )
     )
     assert doc_id in resources
@@ -57,6 +59,7 @@ def test_write_check_and_delete(spicedb_adapter, ensure_schema) -> None:
         subject=f"user:{user_id}",
         relation="view",
         object_=f"document:{doc_id}",
+        consistency="fully_consistent",
     )
 
 
@@ -81,6 +84,7 @@ def test_backfill_batches(spicedb_adapter, ensure_schema) -> None:
             subject=f"user:{user_id}",
             relation="view",
             resource_type="document",
+            consistency="fully_consistent",
         )
     )
     # lookup returns object ids

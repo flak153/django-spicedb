@@ -46,7 +46,7 @@ class SpiceDBAdapter(RebacAdapter):
             schema_pb.WriteSchemaRequest(schema=schema),
             metadata=self._metadata,
         )
-        return response.written_schema.revision
+        return response.written_at.token
 
     # ---------------------------------------------------------------- tuples --
     def write_tuples(self, tuples: Sequence[TupleWrite]) -> None:
@@ -110,7 +110,7 @@ class SpiceDBAdapter(RebacAdapter):
             request.context.fields.update(context)
 
         if consistency:
-            request.consistency = _consistency(consistency)
+            request.consistency.CopyFrom(_consistency(consistency))
 
         response = self._permission_client.CheckPermission(
             request,
@@ -136,7 +136,7 @@ class SpiceDBAdapter(RebacAdapter):
             request.context = perm_pb.Context()
             request.context.fields.update(context)
         if consistency:
-            request.consistency = _consistency(consistency)
+            request.consistency.CopyFrom(_consistency(consistency))
 
         stream = self._permission_client.LookupResources(
             request,

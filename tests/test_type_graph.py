@@ -39,11 +39,11 @@ def test_compile_schema_with_parents_and_bindings() -> None:
 
     schema = graph.compile_schema()
 
-    assert "type document" in schema
-    assert "define owner: user" in schema
-    assert "define viewer: workspace#member" in schema
-    assert "define view: owner | viewer | parent->view" in schema
-    assert "parents\n    workspace" in schema
+    assert "definition document" in schema
+    assert "relation owner: user" in schema
+    assert "relation viewer: workspace#member" in schema
+    assert "permission view = owner | viewer | parent->view" in schema
+    assert "# parents: workspace" in schema
 
     bindings = graph.types["document"].bindings
     assert bindings["owner"]["field"] == "owner"
