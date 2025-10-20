@@ -95,12 +95,12 @@ Shadow mode is the default: decisions are logged but not enforced until toggled 
 ## Local development guide
 - **Run tests**
   ```bash
-  poetry run python -m unittest discover
+  poetry run pytest
   ```
 - **Integration tests** (SpiceDB required; suite lands with TupleSync)  
   ```bash
   docker compose up -d spicedb
-  poetry run python -m unittest tests.integration
+  poetry run pytest tests/integration
   ```
 - **Lint / type check** (planned additions)  
   ```bash
