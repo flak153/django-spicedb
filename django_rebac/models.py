@@ -10,6 +10,7 @@ class TypeDefinition(models.Model):
     """Stores a single type declaration editable via admin."""
 
     name = models.CharField(max_length=128, unique=True)
+    model = models.CharField(max_length=255, blank=True)
     relations = models.JSONField(default=dict, blank=True)
     permissions = models.JSONField(default=dict, blank=True)
     parents = models.JSONField(default=list, blank=True)
@@ -25,13 +26,15 @@ class TypeDefinition(models.Model):
 
     def as_dict(self) -> dict[str, object]:
         """Return the dict shape consumed by :class:`TypeGraph`."""
-
-        return {
+        data = {
             "relations": self.relations or {},
             "permissions": self.permissions or {},
             "parents": self.parents or [],
             "bindings": self.bindings or {},
         }
+        if self.model:
+            data["model"] = self.model
+        return data
 
     def __str__(self) -> str:  # pragma: no cover - admin nicety
         return self.name
@@ -134,3 +137,38 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.action} @ {self.created_at.isoformat()}"
+
+
+class Resource(models.Model):
+    """Abstract base model for hierarchical resources."""
+
+    name = models.CharField(max_length=255, blank=True)
+    slug = models.SlugField(max_length=255, blank=True)
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        related_name="children",
+        on_delete=models.CASCADE,
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self) -> str:  # pragma: no cover
+        if self.name:
+            return self.name
+        if self.slug:
+            return self.slug
+        return f"{self.__class__.__name__}:{self.pk}"
+
+
+class ResourceNode(Resource):
+    """Concrete resource node for apps that want a ready-made hierarchy."""
+
+    class Meta:
+        verbose_name = "Resource node"
+        verbose_name_plural = "Resource nodes"

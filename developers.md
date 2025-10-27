@@ -138,6 +138,8 @@ See [`planning.md`](planning.md) for full precedence rules, feature flags, and H
 - ✅ Initial `TypeGraph` class with validation + toy schema compiler.
 - ✅ `docker-compose.yaml` for SpiceDB + Postgres.
 - ✅ Pytest suite with SpiceDB-backed integration coverage (auto-starts via Docker Compose).
+- ✅ TupleSync registry with FK/M2M bindings, ResourceNode hierarchy support, and recording adapter tests.
+- ✅ PermissionEvaluator + ORM manager (`RebacManager`) for programmatic checks and queryset filtering.
 - 🔜 TupleSync models, admin explorer, DRF/ORM integrations, publish/backfill commands, observability stack.
 
 This project is actively evolving—follow the roadmap and feel free to contribute!

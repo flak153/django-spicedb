@@ -14,7 +14,14 @@ def reset_graph_cache():
     conf.reset_type_graph_cache()
 
 
-@override_settings(REBAC={"types": {"user": {}, "doc": {}}})
+@override_settings(
+    REBAC={
+        "types": {
+            "user": {"model": "django.contrib.auth.models.User"},
+            "doc": {"model": "example_project.documents.models.Document"},
+        }
+    }
+)
 def test_get_type_graph_builds_from_settings() -> None:
     graph = conf.get_type_graph()
 
@@ -29,7 +36,7 @@ def test_missing_rebac_settings_raises() -> None:
         conf.get_type_graph()
 
 
-@override_settings(REBAC={"types": {"user": {}}})
+@override_settings(REBAC={"types": {"user": {"model": "django.contrib.auth.models.User"}}})
 def test_cache_reused_between_calls() -> None:
     first = conf.get_type_graph()
     second = conf.get_type_graph()
@@ -38,9 +45,13 @@ def test_cache_reused_between_calls() -> None:
 
 
 @pytest.mark.django_db
-@override_settings(REBAC={"types": {"user": {}}, "db_overrides": False})
+@override_settings(REBAC={"types": {"user": {"model": "django.contrib.auth.models.User"}}, "db_overrides": False})
 def test_db_overrides_disabled() -> None:
-    TypeDefinition.objects.create(name="document", relations={"owner": "user"})
+    TypeDefinition.objects.create(
+        name="document",
+        model="example_project.documents.models.Document",
+        relations={"owner": "user"},
+    )
 
     graph = conf.get_type_graph()
 
@@ -48,10 +59,11 @@ def test_db_overrides_disabled() -> None:
 
 
 @pytest.mark.django_db
-@override_settings(REBAC={"types": {"user": {}}, "db_overrides": True})
+@override_settings(REBAC={"types": {"user": {"model": "django.contrib.auth.models.User"}}, "db_overrides": True})
 def test_db_overrides_enabled() -> None:
     TypeDefinition.objects.create(
         name="document",
+        model="example_project.documents.models.Document",
         relations={"owner": "user"},
         permissions={"view": "owner"},
         parents=[],

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Mapping, MutableMapping, Set
+from typing import Dict, Iterable, Mapping, MutableMapping, Optional, Set
 
 
 class TypeGraphError(ValueError):
@@ -34,14 +34,16 @@ class TypeConfig:
     """Simple in-memory representation of a type declaration."""
 
     name: str
+    model: Optional[str]
     relations: Mapping[str, str] = field(default_factory=dict)
     permissions: Mapping[str, str] = field(default_factory=dict)
     parents: Iterable[str] = field(default_factory=tuple)
     bindings: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
 
-_PERMISSION_TOKEN_DELIMS = re.compile(r"[|&()!]")
+_PERMISSION_TOKEN_DELIMS = re.compile(r"[|&()!+]")
 _PERMISSION_ARROW = re.compile(r"->")
+_PERMISSION_ARROW_TARGET = re.compile(r"->\s*([A-Za-z0-9_]+)")
 
 
 class TypeGraph:
@@ -91,6 +93,7 @@ class TypeGraph:
         for name, raw_cfg in self._raw.items():
             self._types[name] = TypeConfig(
                 name=name,
+                model=self._extract_model(raw_cfg),
                 relations=self._extract_section(raw_cfg, "relations"),
                 permissions=self._extract_section(raw_cfg, "permissions"),
                 parents=tuple(self._extract_iterable(raw_cfg, "parents")),
@@ -162,6 +165,15 @@ class TypeGraph:
         return result
 
     @staticmethod
+    def _extract_model(cfg: Mapping[str, object]) -> Optional[str]:
+        model = cfg.get("model")
+        if model is None:
+            return None
+        if not isinstance(model, str):
+            raise TypeGraphError("model must be a dotted string path if provided.")
+        return model
+
+    @staticmethod
     def _extract_iterable(cfg: Mapping[str, object], key: str) -> Iterable[str]:
         value = cfg.get(key, ())
         if not value:
@@ -215,8 +227,11 @@ class TypeGraph:
         for cfg in self._types.values():
             known_tokens = set(cfg.relations) | set(cfg.permissions)
             for perm, expression in cfg.permissions.items():
+                arrow_targets = set(_PERMISSION_ARROW_TARGET.findall(expression))
                 for token in self._tokenize_expression(expression):
                     if token in {"|", "&", "(", ")", "!"}:
+                        continue
+                    if token in arrow_targets:
                         continue
                     if token not in known_tokens:
                         raise InvalidPermissionExpression(

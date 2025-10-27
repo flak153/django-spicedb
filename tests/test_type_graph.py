@@ -18,13 +18,14 @@ def test_compile_schema_with_parents_and_bindings() -> None:
                 "permissions": {"view": "member"},
             },
             "document": {
+                "model": "example_project.documents.models.Document",
                 "relations": {
                     "owner": "user",
                     "viewer": "workspace#member",
                     "parent": "workspace",
                 },
                 "permissions": {
-                    "view": "owner | viewer | parent->view",
+                    "view": "owner + viewer + parent->view",
                     "edit": "owner",
                 },
                 "parents": ["workspace"],
@@ -42,10 +43,13 @@ def test_compile_schema_with_parents_and_bindings() -> None:
     assert "definition document" in schema
     assert "relation owner: user" in schema
     assert "relation viewer: workspace#member" in schema
-    assert "permission view = owner | viewer | parent->view" in schema
+    assert "permission view = owner + viewer + parent->view" in schema
     assert "# parents: workspace" in schema
 
-    bindings = graph.types["document"].bindings
+    doc_cfg = graph.types["document"]
+    assert doc_cfg.model == "example_project.documents.models.Document"
+
+    bindings = doc_cfg.bindings
     assert bindings["owner"]["field"] == "owner"
     assert bindings["viewer"]["kind"] == "m2m"
 

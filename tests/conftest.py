@@ -2,10 +2,13 @@ import os
 import subprocess
 import time
 from collections.abc import Iterator
+from typing import Any, Mapping
 
 import grpc
 import pytest
 
+from django_rebac.adapters import reset_adapter, set_adapter
+from django_rebac.adapters.base import TupleKey, TupleWrite
 from django_rebac.adapters.spicedb import SpiceDBAdapter
 
 SPICEDB_ENDPOINT = os.getenv("SPICEDB_ENDPOINT", "localhost:50051")
@@ -83,3 +86,87 @@ def spicedb_adapter() -> Iterator[SpiceDBAdapter]:
         yield adapter
     finally:
         adapter.close()
+
+
+class RecordingAdapter:
+    def __init__(self) -> None:
+        self.schema: str | None = None
+        self.zedtokens: list[str] = []
+        self.writes: list[TupleWrite] = []
+        self.deletes: list[TupleKey] = []
+        self._check_responses: dict[tuple, bool] = {}
+        self._lookup_responses: dict[tuple, list[str]] = {}
+        self.check_calls: list[tuple] = []
+        self.lookup_calls: list[tuple] = []
+
+    def publish_schema(self, schema: str) -> str:
+        self.schema = schema
+        token = f"token-{len(self.zedtokens) + 1}"
+        self.zedtokens.append(token)
+        return token
+
+    def write_tuples(self, tuples):
+        self.writes.extend(tuples)
+
+    def delete_tuples(self, tuples):
+        self.deletes.extend(tuples)
+
+    def set_check_response(
+        self,
+        *,
+        subject: str,
+        relation: str,
+        object_ref: str,
+        result: bool,
+        context: Mapping[str, Any] | None = None,
+        consistency: str | None = None,
+    ) -> None:
+        key = (subject, relation, object_ref, consistency, tuple(sorted((context or {}).items())))
+        self._check_responses[key] = result
+
+    def check(
+        self,
+        subject: str,
+        relation: str,
+        object_: str,
+        *,
+        context: Mapping[str, Any] | None = None,
+        consistency: str | None = None,
+    ) -> bool:
+        key = (subject, relation, object_, consistency, tuple(sorted((context or {}).items())))
+        self.check_calls.append(key)
+        return self._check_responses.get(key, False)
+
+    def set_lookup_response(
+        self,
+        *,
+        subject: str,
+        relation: str,
+        resource_type: str,
+        results: list[str],
+        context: Mapping[str, Any] | None = None,
+        consistency: str | None = None,
+    ) -> None:
+        key = (subject, relation, resource_type, consistency, tuple(sorted((context or {}).items())))
+        self._lookup_responses[key] = results
+
+    def lookup_resources(
+        self,
+        subject: str,
+        relation: str,
+        resource_type: str,
+        *,
+        context: Mapping[str, Any] | None = None,
+        consistency: str | None = None,
+    ):
+        key = (subject, relation, resource_type, consistency, tuple(sorted((context or {}).items())))
+        self.lookup_calls.append(key)
+        return iter(self._lookup_responses.get(key, []))
+
+
+@pytest.fixture
+def recording_adapter() -> Iterator[RecordingAdapter]:
+    adapter = RecordingAdapter()
+    set_adapter(adapter)
+    yield adapter
+    reset_adapter()
