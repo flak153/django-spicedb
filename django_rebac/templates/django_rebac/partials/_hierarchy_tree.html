@@ -1,0 +1,26 @@
+<!-- Embeddable hierarchy tree partial -->
+<!-- Include via: {% include "django_rebac/partials/_hierarchy_tree.html" %} -->
+<!-- Or load via HTMX: hx-get="{% url 'rebac:partial_hierarchy_tree' tenant_pk=tenant.pk %}" -->
+
+<div class="hierarchy-tree" data-rebac-component="hierarchy-tree">
+    {% if nodes %}
+    <ul style="list-style: none; padding: 0; margin: 0;">
+        {% for node in nodes %}
+        <li style="padding: 0.5rem 0; padding-left: {{ node.depth|add:0 }}rem;">
+            <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=node.pk %}"
+               style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="display: inline-flex; align-items: center; justify-content: center;
+                             width: 20px; height: 20px; background: #2563eb; color: white;
+                             border-radius: 4px; font-size: 0.625rem; font-weight: bold;">
+                    {{ node.hierarchy_type.name|slice:":1"|upper }}
+                </span>
+                <span style="font-weight: 500;">{{ node.name }}</span>
+                <span style="color: #64748b; font-size: 0.75rem;">({{ node.hierarchy_type.display_name }})</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color: #64748b; padding: 1rem;">No nodes available.</p>
+    {% endif %}
+</div>

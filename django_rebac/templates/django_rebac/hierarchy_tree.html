@@ -1,0 +1,57 @@
+{% extends "django_rebac/base.html" %}
+{% block title %}Hierarchy - {{ tenant.name }}{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .hierarchy-tree { list-style: none; }
+    .hierarchy-tree ul { list-style: none; margin-left: 1.5rem; }
+    .tree-node {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .tree-node-icon {
+        width: 24px;
+        height: 24px;
+        background: var(--primary);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .tree-node-name { font-weight: 500; }
+    .tree-node-type { color: var(--text-muted); font-size: 0.75rem; }
+    .tree-node a {
+        color: inherit;
+        text-decoration: none;
+    }
+    .tree-node a:hover .tree-node-name {
+        color: var(--primary);
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1>Organization Hierarchy</h1>
+    </div>
+
+    {% if hierarchy_tree %}
+        <ul class="hierarchy-tree">
+            {% for item in hierarchy_tree %}
+                {% include "django_rebac/partials/_tree_node.html" with item=item %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="empty-state">
+            <p>No hierarchy nodes found or you don't have access to any nodes.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

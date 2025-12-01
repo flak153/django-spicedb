@@ -1,0 +1,125 @@
+{% extends "django_rebac/base.html" %}
+{% block title %}{{ node.name }} - {{ tenant.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'rebac:hierarchy_tree' tenant_pk=tenant.pk %}">Hierarchy</a>
+    <span>/</span>
+    {% for ancestor in node.get_ancestors %}
+        <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=ancestor.pk %}">{{ ancestor.name }}</a>
+        <span>/</span>
+    {% endfor %}
+    <span>{{ node.name }}</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h1>{{ node.name }}</h1>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">{{ node.hierarchy_type.display_name }}</p>
+        </div>
+        {% if can_manage %}
+        <div>
+            <a href="{% url 'rebac:invite_user' tenant_pk=tenant.pk node_pk=node.pk %}" class="btn btn-primary">
+                + Invite User
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <strong>Type:</strong> {{ node.hierarchy_type.display_name }}
+        </div>
+        <div>
+            <strong>Depth:</strong> {{ node.depth }}
+        </div>
+        {% if node.slug %}
+        <div>
+            <strong>Slug:</strong> {{ node.slug }}
+        </div>
+        {% endif %}
+        {% if node.code %}
+        <div>
+            <strong>Code:</strong> {{ node.code }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Role Assignments -->
+<div class="card">
+    <div class="card-header">
+        <h2>Role Assignments</h2>
+    </div>
+
+    {% if roles %}
+    <table>
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Inheritable</th>
+                {% if can_manage %}<th>Actions</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for role in roles %}
+            <tr>
+                <td>{{ role.user.username }}</td>
+                <td>{{ role.user.email }}</td>
+                <td><span class="badge badge-{{ role.role }}">{{ role.get_role_display }}</span></td>
+                <td>{% if role.inheritable %}Yes{% else %}No{% endif %}</td>
+                {% if can_manage %}
+                <td>
+                    <form method="post" action="{% url 'rebac:remove_role' tenant_pk=tenant.pk node_pk=node.pk role_pk=role.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this role?')">Remove</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No role assignments yet.</p>
+        {% if can_manage %}
+        <p><a href="{% url 'rebac:invite_user' tenant_pk=tenant.pk node_pk=node.pk %}">Invite someone</a></p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Child Nodes -->
+{% if children %}
+<div class="card">
+    <div class="card-header">
+        <h2>Child Nodes</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for child in children %}
+            <tr>
+                <td><a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=child.pk %}">{{ child.name }}</a></td>
+                <td>{{ child.hierarchy_type.display_name }}</td>
+                <td>
+                    <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=child.pk %}" class="btn btn-secondary btn-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+<li>
+    <div class="tree-node">
+        <div class="tree-node-icon">{{ item.node.hierarchy_type.name|slice:":1"|upper }}</div>
+        <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=item.node.pk %}">
+            <span class="tree-node-name">{{ item.node.name }}</span>
+            <span class="tree-node-type">{{ item.node.hierarchy_type.display_name }}</span>
+        </a>
+    </div>
+    {% if item.children %}
+    <ul>
+        {% for child in item.children %}
+            {% include "django_rebac/partials/_tree_node.html" with item=child %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>

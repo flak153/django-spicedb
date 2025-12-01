@@ -1,0 +1,55 @@
+{% extends "django_rebac/base.html" %}
+{% block title %}Invite User - {{ node.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'rebac:hierarchy_tree' tenant_pk=tenant.pk %}">Hierarchy</a>
+    <span>/</span>
+    <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=node.pk %}">{{ node.name }}</a>
+    <span>/</span>
+    <span>Invite User</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h1>Invite User to {{ node.name }}</h1>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" required placeholder="user@example.com">
+            <small style="color: var(--text-muted);">If user doesn't exist, an account will be created.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Role</label>
+            <select id="role" name="role" class="form-control" required>
+                <option value="">Select a role...</option>
+                {% for value, label in roles %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary">Send Invitation</button>
+            <a href="{% url 'rebac:node_detail' tenant_pk=tenant.pk node_pk=node.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Role Descriptions</h3>
+    <ul style="margin-top: 1rem; padding-left: 1.5rem;">
+        <li><strong>Owner:</strong> Full administrative control. Can manage all settings and users.</li>
+        <li><strong>Manager:</strong> Can view and manage resources. Can assign roles to others.</li>
+        <li><strong>Viewer:</strong> Read-only access to resources.</li>
+        <li><strong>Admin:</strong> Administrative access (inherits from owner).</li>
+        <li><strong>Lead:</strong> Team lead with management capabilities.</li>
+        <li><strong>Member:</strong> Basic team membership with view access.</li>
+    </ul>
+</div>
+{% endblock %}

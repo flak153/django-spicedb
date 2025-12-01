@@ -1,0 +1,45 @@
+<!-- Embeddable role assignment form partial -->
+<!-- Include via: {% include "django_rebac/partials/_role_form.html" with node=node %} -->
+<!-- Or load via HTMX: hx-get="{% url 'rebac:partial_role_form' tenant_pk=tenant.pk node_pk=node.pk %}" -->
+
+<div class="role-form" data-rebac-component="role-form" data-node-id="{{ node.pk }}">
+    <form method="post"
+          action="{% url 'rebac:assign_role' tenant_pk=tenant.pk node_pk=node.pk %}"
+          hx-post="{% url 'rebac:assign_role' tenant_pk=tenant.pk node_pk=node.pk %}"
+          hx-target="#node-roles-list"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 1rem;">
+            <label for="user_id" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">
+                User
+            </label>
+            <select id="user_id" name="user_id" required
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem;">
+                <option value="">Select a user...</option>
+                {% for user in users %}
+                <option value="{{ user.pk }}">{{ user.username }} ({{ user.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="role" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem;">
+                Role
+            </label>
+            <select id="role" name="role" required
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem;">
+                <option value="">Select a role...</option>
+                {% for value, label in roles %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit"
+                style="padding: 0.5rem 1rem; background: #2563eb; color: white; border: none;
+                       border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+            Assign Role
+        </button>
+    </form>
+</div>
