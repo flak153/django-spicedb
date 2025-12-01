@@ -49,10 +49,10 @@
 - [x] Create migration for new models (`0004_add_hierarchy_models.py`)
 - [x] Run `makemigrations django_rebac`
 
-**1.6 Admin Registration**
-- [ ] Register `HierarchyTypeDefinition` with list display, filters
-- [ ] Register `HierarchyNode` with tree view (or at least parent filter)
-- [ ] Register `HierarchyNodeRole` as inline on HierarchyNode
+**1.6 Admin Registration** (`django_rebac/admin.py`)
+- [x] Register `HierarchyTypeDefinition` with list display, filters
+- [x] Register `HierarchyNode` with tree view (or at least parent filter)
+- [x] Register `HierarchyNodeRole` as inline on HierarchyNode
 
 ### Phase 2: SpiceDB Schema
 
@@ -68,60 +68,59 @@ definition hierarchy_node {
 ```
 
 **2.2 Schema Integration**
-- [ ] Add `hierarchy_node` type to default `settings.REBAC['types']`
-- [ ] Or: auto-register when HierarchyTypeDefinition exists
-- [ ] Ensure `publish_rebac_schema` includes hierarchy_node
+- [x] Add `hierarchy_node` type to `settings.REBAC['types']` (configurable)
+- [x] Schema compiles with parent->permission arrow notation
+- [x] TypeGraph includes hierarchy_node when configured
 
 ### Phase 3: Tuple Sync for Hierarchy
 
-**3.1 Signal Handlers** (new file: `django_rebac/hierarchy/signals.py`)
-- [ ] `post_save` on `HierarchyNode`: write parent tuple
-- [ ] `post_delete` on `HierarchyNode`: delete parent tuple
-- [ ] `post_save` on `HierarchyNodeRole`: write role tuple (e.g., `hierarchy_node:123#manager@user:456`)
-- [ ] `post_delete` on `HierarchyNodeRole`: delete role tuple
+**3.1 Signal Handlers** (`django_rebac/hierarchy/signals.py`)
+- [x] `post_save` on `HierarchyNode`: write parent tuple
+- [x] `post_delete` on `HierarchyNode`: delete parent tuple
+- [x] `post_save` on `HierarchyNodeRole`: write role tuple (e.g., `hierarchy_node:123#manager@user:456`)
+- [x] `post_delete` on `HierarchyNodeRole`: delete role tuple
 
 **3.2 Integrate with Existing Registry**
-- [ ] Option A: Extend `sync/registry.py` to handle hierarchy models
-- [ ] Option B: Separate registry in `hierarchy/` package
-- [ ] Register signals in `apps.py` ready hook
+- [x] Separate registry in `hierarchy/` package (cleaner separation)
+- [x] `connect_hierarchy_signals()` / `disconnect_hierarchy_signals()` API
 
 ### Phase 4: Tenant-Aware Evaluation
 
-**4.1 Tenant Context** (new file: `django_rebac/tenant/context.py`)
-- [ ] Thread-local `_current_tenant`
-- [ ] `get_current_tenant()` / `set_current_tenant()`
-- [ ] Context manager: `with tenant_context(tenant):`
+**4.1 Tenant Context** (`django_rebac/tenant.py`)
+- [x] Thread-local `_current_tenant`
+- [x] `get_current_tenant()` / `set_current_tenant()` / `clear_current_tenant()`
+- [x] Context manager: `with tenant_context(tenant):`
 
 **4.2 Tenant Middleware** (new file: `django_rebac/tenant/middleware.py`)
 - [ ] Resolve tenant from: subdomain, header (`X-Tenant-ID`), or user's default
 - [ ] Set `request.tenant` and thread-local
 - [ ] Clear on response
 
-**4.3 Tenant-Aware Evaluator** (extend `runtime/evaluator.py`)
-- [ ] `TenantAwarePermissionEvaluator(subject, tenant=None)`
-- [ ] Override `can()`: check `obj.tenant_id == self._tenant.id` BEFORE SpiceDB call
-- [ ] Cross-tenant access = automatic deny (security critical)
+**4.3 Tenant-Aware Evaluator** (`django_rebac/tenant.py`)
+- [x] `TenantAwarePermissionEvaluator(subject, tenant=None)`
+- [x] Override `can()`: check `obj.tenant_id == self._tenant.id` BEFORE SpiceDB call
+- [x] Cross-tenant access = automatic deny (security critical)
 
-**4.4 Tenant-Aware QuerySet** (extend `integrations/orm.py`)
-- [ ] `TenantAwareRebacQuerySet` with auto tenant filtering
-- [ ] `accessible_by()` filters by tenant FIRST, then calls LookupResources
+**4.4 Tenant-Aware QuerySet** (`django_rebac/integrations/orm.py`)
+- [x] `TenantAwareRebacQuerySet` with auto tenant filtering
+- [x] `accessible_by()` filters by tenant FIRST, then calls LookupResources
 
 ### Phase 5: Optimized Reverse Lookups
 
-**5.1 Hierarchy Lookup Helper** (new file: `django_rebac/hierarchy/lookups.py`)
-- [ ] `TenantHierarchyLookup(user, tenant)`
-- [ ] `get_accessible_hierarchy_nodes(permission)` - returns Set[int] of node IDs
-- [ ] Cache per request (avoid repeated LookupResources calls)
+**5.1 Hierarchy Lookup Helper** (`django_rebac/tenant.py`)
+- [x] `TenantHierarchyLookup(user, tenant)`
+- [x] `get_accessible_hierarchy_nodes(permission)` - returns Set[int] of node IDs
+- [x] Cache per request (avoid repeated LookupResources calls)
 
 **5.2 Filter by Hierarchy Node**
-- [ ] For models with `hierarchy_node` FK: filter `hierarchy_node_id__in=accessible_nodes`
-- [ ] More efficient than per-object LookupResources
+- [x] `filter_queryset()` method on TenantHierarchyLookup
+- [x] Filters `hierarchy_node_id__in=accessible_nodes`
 
 ### Phase 6: Admin UI
 
-- [ ] Hierarchy type builder (define levels for a tenant)
-- [ ] Hierarchy node tree view (create/edit/delete nodes)
-- [ ] Role assignment inline
+- [x] Hierarchy type definition admin with list display, filters
+- [x] Hierarchy node admin with parent filter, search
+- [x] Role assignment inline on HierarchyNode
 - [ ] Permission tester ("What can user X see?")
 
 ### Phase 7: Testing
