@@ -36,6 +36,22 @@ def _test_graph() -> TypeGraph:
                 },
                 "permissions": {"view": "owner"},
             },
+            # Include hierarchy_node to maintain schema compatibility with hierarchy tests
+            "hierarchy_node": {
+                "relations": {
+                    "parent": "hierarchy_node",
+                    "owner": "user",
+                    "manager": "user",
+                    "viewer": "user",
+                    "lead": "user",
+                    "member": "user",
+                },
+                "permissions": {
+                    "admin": "owner + parent->admin",
+                    "manage": "manager + lead + admin + parent->manage",
+                    "view": "viewer + member + manage + parent->view",
+                },
+            },
         }
     )
 

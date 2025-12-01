@@ -145,6 +145,21 @@ class SpiceDBAdapter(RebacAdapter):
         for item in stream:
             yield item.resource_object_id
 
+    def delete_all_relationships(self, resource_type: str) -> None:
+        """Delete all relationships for a resource type.
+
+        Useful for test cleanup.
+        """
+        request = perm_pb.DeleteRelationshipsRequest(
+            relationship_filter=perm_pb.RelationshipFilter(
+                resource_type=resource_type,
+            )
+        )
+        self._permission_client.DeleteRelationships(
+            request,
+            metadata=self._metadata,
+        )
+
     # ---------------------------------------------------------------- cleanup -
     def close(self) -> None:
         self._channel.close()

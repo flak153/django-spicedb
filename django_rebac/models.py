@@ -422,13 +422,19 @@ class HierarchyNodeRole(models.Model):
     This represents "User X has role Y on Node Z" (e.g., "Alice is a manager of North Region").
     """
 
+    ROLE_OWNER = "owner"
     ROLE_MANAGER = "manager"
     ROLE_VIEWER = "viewer"
     ROLE_ADMIN = "admin"
+    ROLE_LEAD = "lead"
+    ROLE_MEMBER = "member"
     ROLE_CHOICES = [
+        (ROLE_OWNER, "Owner"),
         (ROLE_MANAGER, "Manager"),
         (ROLE_VIEWER, "Viewer"),
         (ROLE_ADMIN, "Admin"),
+        (ROLE_LEAD, "Lead"),
+        (ROLE_MEMBER, "Member"),
     ]
 
     node = models.ForeignKey(
