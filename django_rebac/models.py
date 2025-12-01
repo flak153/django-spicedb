@@ -5,6 +5,8 @@ from __future__ import annotations
 from django.db import models
 from django.utils import timezone
 
+from django_rebac.integrations.orm import TenantAwareRebacManager
+
 
 class TypeDefinition(models.Model):
     """Stores a single type declaration editable via admin."""
@@ -340,6 +342,8 @@ class HierarchyNode(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantAwareRebacManager()
 
     class Meta:
         verbose_name = "Hierarchy node"

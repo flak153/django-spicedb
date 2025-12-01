@@ -124,3 +124,59 @@ def _rebuild_model_cache(graph: TypeGraph) -> None:
     for type_name, cfg in graph.types.items():
         if cfg.model:
             _MODEL_TYPE_CACHE[cfg.model] = type_name
+
+
+# =============================================================================
+# Tenant Configuration Helpers
+# =============================================================================
+
+
+def get_tenant_model() -> Type[Any]:
+    """
+    Return the Django model class configured as the tenant model.
+
+    Configure via ``REBAC['tenant_model'] = 'myapp.Company'``.
+
+    Raises:
+        ValueError: If ``tenant_model`` is not configured in settings.
+        ImproperlyConfigured: If the model cannot be imported.
+    """
+    config = _get_rebac_settings()
+    tenant_model_path = config.get("tenant_model")
+
+    if not tenant_model_path:
+        raise ValueError(
+            "REBAC['tenant_model'] is not configured. "
+            "Set it to your tenant model path, e.g., 'myapp.Company'."
+        )
+
+    try:
+        return import_string(tenant_model_path)
+    except ImportError as e:
+        raise ImproperlyConfigured(
+            f"Could not import tenant model {tenant_model_path!r}: {e}"
+        ) from e
+
+
+def get_tenant_content_type():
+    """
+    Return the ContentType for the configured tenant model.
+
+    Returns:
+        ContentType: The ContentType instance for the tenant model.
+    """
+    from django.contrib.contenttypes.models import ContentType
+
+    tenant_model = get_tenant_model()
+    return ContentType.objects.get_for_model(tenant_model)
+
+
+def get_tenant_fk_name() -> str:
+    """
+    Return the FK field name for tenant relationships.
+
+    Configure via ``REBAC['tenant_fk_name'] = 'company'``.
+    Defaults to ``'tenant'`` if not configured.
+    """
+    config = _get_rebac_settings()
+    return config.get("tenant_fk_name", "tenant")

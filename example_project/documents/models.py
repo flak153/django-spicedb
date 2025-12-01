@@ -5,6 +5,22 @@ from django_rebac.integrations.orm import RebacManager
 from django_rebac.models import Resource
 
 
+class Company(models.Model):
+    """Sample tenant model for multi-tenant testing."""
+
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=128, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Company"
+        verbose_name_plural = "Companies"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Workspace(models.Model):
     name = models.CharField(max_length=128)
     members = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)

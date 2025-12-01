@@ -46,8 +46,8 @@
 - [ ] Helper: `get_tenant_content_type()` returns ContentType for tenant model
 
 **1.5 Migrations**
-- [ ] Create migration for new models
-- [ ] Run `makemigrations django_rebac`
+- [x] Create migration for new models (`0004_add_hierarchy_models.py`)
+- [x] Run `makemigrations django_rebac`
 
 **1.6 Admin Registration**
 - [ ] Register `HierarchyTypeDefinition` with list display, filters
@@ -126,10 +126,13 @@ definition hierarchy_node {
 
 ### Phase 7: Testing
 
-- [ ] Unit tests for HierarchyNode path/depth calculation
-- [ ] Unit tests for HierarchyNodeRole tuple generation
-- [ ] Integration test: create hierarchy, assign roles, check permissions
-- [ ] Integration test: tenant isolation (user A can't see tenant B's nodes)
+- [x] Unit tests for HierarchyNode path/depth calculation (`tests/test_hierarchy.py`)
+- [x] Unit tests for HierarchyTypeDefinition constraints and properties
+- [x] Unit tests for HierarchyNodeRole constraints
+- [x] Unit tests for ancestor/descendant queries
+- [ ] Unit tests for HierarchyNodeRole tuple generation (after Phase 3)
+- [ ] Integration test: create hierarchy, assign roles, check permissions (after Phase 3-4)
+- [ ] Integration test: tenant isolation (user A can't see tenant B's nodes) (after Phase 4)
 
 ---
 
