@@ -1,6 +1,6 @@
 [project]
 name = "django-spicedb"
-version = "0.1.1"
+version = "0.1.2"
 description = "Declarative relationship-based access control (ReBAC) for Django, backed by SpiceDB"
 authors = [
     {name = "Mohammed R. Ali", email = "flakgun153@gmail.com"}
