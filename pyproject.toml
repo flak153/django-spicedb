@@ -1,6 +1,6 @@
 [project]
 name = "django-spicedb"
-version = "0.1.0"
+version = "0.1.1"
 description = "Declarative relationship-based access control (ReBAC) for Django, backed by SpiceDB"
 authors = [
     {name = "Mohammed R. Ali", email = "flakgun153@gmail.com"}
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "django (>=5.0,<6.0.0)",
+    "django (>=5.0,<7.0.0)",
     "authzed (>=1.23.0,<2.0.0)",
     "grpcio (>=1.75.1,<2.0.0)",
 ]
