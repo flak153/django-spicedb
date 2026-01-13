@@ -44,19 +44,64 @@ REBAC = {
 
 ## Quickstart
 
-### 1. Start SpiceDB
+This walkthrough models a tiny system and shows the thinking process
+you'll repeat in real apps: **rules → relations → permissions → code**.
+
+### 0. Start SpiceDB
 
 ```bash
 docker run -d --name spicedb -p 50051:50051 \
   authzed/spicedb serve --grpc-preshared-key devkey
 ```
 
-### 2. Define Your Models
+### 1. Write the rules in plain English
+
+Pick a concrete example. We'll use folders and documents:
+
+- A folder can have a parent folder.
+- A document has an owner and can live in a folder.
+- Owners can view/edit their own items.
+- If you can view/edit a parent folder, you can view/edit its children.
+
+If you can explain the rule to a teammate, you can model it.
+
+### 2. Turn rules into relations and permissions
+
+Think in two layers:
+
+- **Relations**: direct links like "document.owner" or "folder.parent"
+- **Permissions**: expressions like "view = owner + parent->view"
+
+For our example:
+
+- Relations: `owner`, `parent`
+- Permissions: `view = owner + parent->view`, `edit = owner + parent->edit`
+
+### 3. Implement models with `RebacMeta`
+
+Now we express that mapping in Django models.
 
 ```python
 from django.db import models
 from django_rebac.models import RebacModel
 from django_rebac.integrations.orm import RebacManager
+
+class Folder(RebacModel):
+    name = models.CharField(max_length=255)
+    owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
+
+    objects = RebacManager()
+
+    class RebacMeta:
+        relations = {
+            'owner': 'owner',
+            'parent': 'parent',
+        }
+        permissions = {
+            'view': 'owner + parent->view',
+            'edit': 'owner + parent->edit',
+        }
 
 class Document(RebacModel):
     title = models.CharField(max_length=255)
@@ -67,8 +112,8 @@ class Document(RebacModel):
 
     class RebacMeta:
         relations = {
-            'owner': 'owner',      # FK field name
-            'parent': 'folder',    # FK to parent resource
+            'owner': 'owner',
+            'parent': 'folder',
         }
         permissions = {
             'view': 'owner + parent->view',
@@ -76,23 +121,27 @@ class Document(RebacModel):
         }
 ```
 
-### 3. Publish Schema & Backfill
+### 4. Publish schema and backfill tuples
+
+Schema tells SpiceDB what the types and permissions look like.
+Backfill creates the initial tuples from existing rows.
 
 ```bash
 python manage.py publish_rebac_schema
 python manage.py rebac_backfill
 ```
 
-### 4. Check Permissions
+### 5. Use permissions in code
+
+Now you can ask SpiceDB whether a user can access an object, or
+filter querysets by permission.
 
 ```python
 from django_rebac.runtime import can
 
-# Simple check
 if can(request.user, 'view', document):
     # User can view this document
 
-# Query accessible objects
 documents = Document.objects.accessible_by(request.user, 'view')
 ```
 
@@ -282,6 +331,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['django_rebac.drf.ReBACPermission'],
 }
 ```
+
+---
+
+## Full Tutorial
+
+Want a complete walkthrough? **[Read the tutorial](docs/tutorial.md)** - builds a document management system step-by-step, explaining every concept along the way.
 
 ---
 
