@@ -1,0 +1,272 @@
+{
+  "test_report": {
+    "date": "2025-12-01",
+    "test_suite": "HTMX Hierarchy UI Functional Testing",
+    "status": "FAILED",
+    "severity": "CRITICAL",
+    "environment": {
+      "application": "django-spicedb",
+      "django_version": "5.2",
+      "spicedb_version": "1.36.0",
+      "htmx_version": "2.0.4",
+      "test_url": "http://localhost:8000/rebac/5/hierarchy/",
+      "browser": "Chromium 141.0 (Playwright)",
+      "os": "macOS Darwin 22.6.0"
+    },
+    "summary": {
+      "total_test_cases": 6,
+      "executed": 2,
+      "passed": 0,
+      "failed": 2,
+      "blocked": 4,
+      "pass_rate": "0%",
+      "blocking_issues": 2
+    },
+    "critical_bugs": [
+      {
+        "bug_id": "CONFIG-001",
+        "title": "Missing tenant_model Configuration",
+        "severity": "HIGH",
+        "priority": "P0",
+        "status": "NEW",
+        "component": "Configuration",
+        "description": "REBAC['tenant_model'] is not configured in example_project/settings.py, causing all hierarchy views to fail with ValueError",
+        "impact": "Complete inability to access hierarchy UI",
+        "affected_files": [
+          "example_project/settings.py",
+          "django_rebac/conf.py",
+          "django_rebac/views.py"
+        ],
+        "error_message": "REBAC['tenant_model'] is not configured. Set it to your tenant model path, e.g., 'myapp.Company'.",
+        "error_location": "django_rebac/conf.py:148",
+        "proposed_fix": "Add 'tenant_model': 'example_project.documents.models.Company' to REBAC settings",
+        "blocks": [
+          "All hierarchy UI functionality",
+          "HTMX testing",
+          "Permission system testing",
+          "Role management features"
+        ]
+      },
+      {
+        "bug_id": "CONFIG-002",
+        "title": "Missing Login Template",
+        "severity": "MEDIUM",
+        "priority": "P1",
+        "status": "NEW",
+        "component": "Templates/Authentication",
+        "description": "No login template exists at templates/registration/login.html",
+        "impact": "Users redirected to login cannot authenticate via standard Django login",
+        "error_message": "TemplateDoesNotExist at /accounts/login/",
+        "proposed_fix": "Create login template or configure URL to use admin login"
+      }
+    ],
+    "test_cases": [
+      {
+        "id": "TC-001",
+        "name": "Anonymous User Access",
+        "objective": "Verify unauthenticated users are redirected to login",
+        "status": "PASS_WITH_ISSUES",
+        "result": "Redirected correctly but login page has TemplateDoesNotExist error",
+        "http_status": 302,
+        "redirect_url": "/accounts/login/?next=/rebac/5/hierarchy/",
+        "issues": ["CONFIG-002"],
+        "evidence": "/tmp/screenshot_1_not_logged_in.png"
+      },
+      {
+        "id": "TC-002",
+        "name": "Authenticated Admin Access to Hierarchy Tree",
+        "objective": "Verify admin can access hierarchy tree view",
+        "status": "FAIL",
+        "result": "ValueError due to missing tenant_model configuration",
+        "http_status": 500,
+        "error_type": "ValueError",
+        "issues": ["CONFIG-001"],
+        "evidence": "/tmp/debug_screenshot.png",
+        "blocks": ["TC-003", "TC-004", "TC-005", "TC-006"]
+      },
+      {
+        "id": "TC-003",
+        "name": "Hierarchy Tree View Display",
+        "objective": "Verify hierarchy tree renders correctly with accessible nodes",
+        "status": "BLOCKED",
+        "blocked_by": "CONFIG-001"
+      },
+      {
+        "id": "TC-004",
+        "name": "Node Detail View",
+        "objective": "Verify node detail page shows role assignments and child nodes",
+        "status": "BLOCKED",
+        "blocked_by": "CONFIG-001"
+      },
+      {
+        "id": "TC-005",
+        "name": "HTMX Role Assignment Form",
+        "objective": "Test HTMX-powered role assignment without page reload",
+        "status": "BLOCKED",
+        "blocked_by": "CONFIG-001",
+        "test_steps": [
+          "Click 'Add Role' button",
+          "Select user from dropdown",
+          "Select role (owner/manager/viewer)",
+          "Submit form",
+          "Verify HTMX updates roles list",
+          "Verify form closes automatically",
+          "Verify toast notification appears"
+        ]
+      },
+      {
+        "id": "TC-006",
+        "name": "HTMX Dynamic Role Removal",
+        "objective": "Test HTMX-powered role removal with confirmation",
+        "status": "BLOCKED",
+        "blocked_by": "CONFIG-001",
+        "test_steps": [
+          "Click 'Remove' button on role",
+          "Confirm deletion in modal",
+          "Verify HTMX updates roles list",
+          "Verify role is removed without page reload"
+        ]
+      }
+    ],
+    "code_review_findings": {
+      "htmx_implementation": {
+        "version": "2.0.4",
+        "integration_quality": "GOOD",
+        "progressive_enhancement": true,
+        "positive_aspects": [
+          "Modern HTMX 2.0 usage",
+          "Proper event handling (hx-on::after-request)",
+          "Server-side HTMX detection",
+          "Graceful degradation",
+          "CSRF protection maintained",
+          "Loading indicators configured",
+          "Toast notifications for UX"
+        ],
+        "concerns": [
+          "No explicit error recovery for failed HTMX requests",
+          "No retry mechanism",
+          "No optimistic UI updates",
+          "Missing ARIA live regions for screen readers"
+        ]
+      },
+      "performance": {
+        "concerns": [
+          "Potential N+1 query problem in role loading",
+          "No pagination for large hierarchies",
+          "No caching of permission checks"
+        ],
+        "recommendations": [
+          "Add select_related() for role queries",
+          "Implement lazy loading for tree nodes",
+          "Cache permission evaluation results"
+        ]
+      },
+      "security": {
+        "authentication": "PROPER",
+        "authorization": "PROPER",
+        "csrf_protection": "PROPER",
+        "concerns": [
+          "No rate limiting on role endpoints",
+          "No audit logging for permission changes",
+          "Tenant isolation depends on URL validation"
+        ]
+      },
+      "accessibility": {
+        "status": "NEEDS_IMPROVEMENT",
+        "issues": [
+          "Missing ARIA labels for dynamic content",
+          "No aria-live announcements for HTMX updates",
+          "No keyboard navigation documentation",
+          "Missing aria-busy during loading states"
+        ]
+      }
+    },
+    "browser_console": {
+      "errors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "location": "/accounts/login/",
+          "impact": "Minor - likely missing static file"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          "location": "/rebac/5/hierarchy/",
+          "impact": "Critical - page cannot load"
+        }
+      ],
+      "javascript_errors": 0
+    },
+    "recommendations": {
+      "immediate": [
+        {
+          "priority": "P0",
+          "action": "Add tenant_model to REBAC settings in example_project/settings.py",
+          "impact": "Unblocks all testing",
+          "effort": "5 minutes"
+        },
+        {
+          "priority": "P0",
+          "action": "Create login template or update URL configuration",
+          "impact": "Enables proper authentication flow",
+          "effort": "15 minutes"
+        },
+        {
+          "priority": "P0",
+          "action": "Re-run full test suite after fixes",
+          "impact": "Validates HTMX functionality",
+          "effort": "30 minutes"
+        }
+      ],
+      "short_term": [
+        {
+          "priority": "P1",
+          "action": "Add integration tests for HTMX endpoints",
+          "impact": "Prevents regressions"
+        },
+        {
+          "priority": "P1",
+          "action": "Implement error boundaries for HTMX failures",
+          "impact": "Better UX"
+        },
+        {
+          "priority": "P1",
+          "action": "Add comprehensive setup documentation",
+          "impact": "Easier onboarding"
+        }
+      ],
+      "long_term": [
+        {
+          "priority": "P2",
+          "action": "Implement pagination for hierarchies",
+          "impact": "Scalability"
+        },
+        {
+          "priority": "P2",
+          "action": "Add permission check caching",
+          "impact": "Performance"
+        },
+        {
+          "priority": "P2",
+          "action": "Improve accessibility (ARIA, keyboard nav)",
+          "impact": "Compliance and usability"
+        },
+        {
+          "priority": "P2",
+          "action": "Add audit logging",
+          "impact": "Security and compliance"
+        }
+      ]
+    },
+    "release_recommendation": {
+      "verdict": "DO NOT RELEASE",
+      "rationale": "Critical configuration bug prevents any UI functionality. Must be fixed before release.",
+      "required_fixes": [
+        "CONFIG-001: Add tenant_model to settings",
+        "CONFIG-002: Create login template"
+      ],
+      "retest_required": true
+    }
+  }
+}

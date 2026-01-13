@@ -134,12 +134,33 @@ See [`planning.md`](planning.md) for full precedence rules, feature flags, and H
 
 ---
 
-## Current status snapshot (WIP)
-- ✅ Initial `TypeGraph` class with validation + toy schema compiler.
-- ✅ `docker-compose.yaml` for SpiceDB + Postgres.
-- ✅ Pytest suite with SpiceDB-backed integration coverage (auto-starts via Docker Compose).
-- ✅ TupleSync registry with FK/M2M bindings, ResourceNode hierarchy support, and recording adapter tests.
-- ✅ PermissionEvaluator + ORM manager (`RebacManager`) for programmatic checks and queryset filtering.
-- 🔜 TupleSync models, admin explorer, DRF/ORM integrations, publish/backfill commands, observability stack.
+## Current status snapshot
+
+### Core Features (Complete)
+- ✅ **TypeGraph** with validation, schema compilation, and SpiceDB DSL generation
+- ✅ **Model-centric configuration** via `RebacMeta` inner class (like Django's `Meta`)
+- ✅ **Auto-inferred bindings** from FK/M2M field types
+- ✅ **TupleSync** with `post_save`, `post_delete`, `m2m_changed` signal handlers
+- ✅ **FK change tracking** via `pre_save` to delete stale tuples on relationship changes
+- ✅ **Transaction safety** with `transaction.on_commit()` for all SpiceDB writes
+- ✅ **PermissionEvaluator** + `can()` convenience function
+- ✅ **RebacManager** with `.accessible_by(user, permission)` queryset filtering
+- ✅ **Group-based access control** pattern with role-based membership (member/manager)
+- ✅ **Permission inheritance** via `parent->permission` expressions
+- ✅ **SpiceDB adapter** with gRPC, `lookup_resources`, `lookup_subjects`, consistency controls
+- ✅ **Management commands**: `publish_rebac_schema`, `rebac_backfill`
+
+### Infrastructure (Complete)
+- ✅ `docker-compose.yaml` for SpiceDB + Postgres
+- ✅ 196 tests with SpiceDB integration coverage (auto-starts via Docker Compose)
+- ✅ Recording adapter for unit testing without SpiceDB
+- ✅ Comprehensive FK change tracking with `subject_field`/`object_field` support (tested)
+
+### In Progress
+- 🔜 Admin explorer UI for policy inspection
+- 🔜 DRF permission class integration
+- 🔜 Caveats/context pipeline
+- 🔜 Observability stack (metrics, structured logs, tracing)
+- 🔜 Watch-driven cache invalidation
 
 This project is actively evolving—follow the roadmap and feel free to contribute!

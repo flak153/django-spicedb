@@ -1,51 +1,71 @@
-<!-- Embeddable node roles list partial -->
-<!-- Include via: {% include "django_rebac/partials/_node_roles.html" with node=node roles=roles %} -->
-<!-- Or load via HTMX: hx-get="{% url 'rebac:partial_node_roles' tenant_pk=tenant.pk node_pk=node.pk %}" -->
+<!--
+Embeddable node roles list partial - HTMX powered
 
-<div class="node-roles" data-rebac-component="node-roles" data-node-id="{{ node.pk }}">
+Usage:
+1. Include directly: {% include "django_rebac/partials/_node_roles.html" with node=node roles=roles can_manage=can_manage tenant=tenant %}
+2. Load via HTMX: <div hx-get="{% url 'rebac:partial_node_roles' tenant_pk=tenant.pk node_pk=node.pk %}" hx-trigger="load"></div>
+3. Embed anywhere with script tag (see docs)
+
+Required context: node, roles, can_manage, tenant
+-->
+
+<div class="node-roles" id="node-roles-{{ node.pk|default:'list' }}">
     {% if roles %}
     <table style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr>
-                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">User</th>
-                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Role</th>
+                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">User</th>
+                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Role</th>
+                <th style="text-align: left; padding: 0.75rem; border-bottom: 2px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Inherited</th>
                 {% if can_manage %}
-                <th style="text-align: left; padding: 0.5rem; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Actions</th>
+                <th style="text-align: right; padding: 0.75rem; border-bottom: 2px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Actions</th>
                 {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for role in roles %}
-            <tr>
-                <td style="padding: 0.5rem; border-bottom: 1px solid #e2e8f0;">
-                    {{ role.user.username }}
-                    <br><small style="color: #64748b;">{{ role.user.email }}</small>
+            <tr id="role-row-{{ role.pk }}" class="role-row">
+                <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-weight: 500;">{{ role.user.username }}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">{{ role.user.email }}</div>
                 </td>
-                <td style="padding: 0.5rem; border-bottom: 1px solid #e2e8f0;">
-                    <span style="display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px;
-                                 font-size: 0.75rem; font-weight: 500;
-                                 {% if role.role == 'owner' %}background: #dbeafe; color: #1e40af;
-                                 {% elif role.role == 'manager' %}background: #dcfce7; color: #166534;
-                                 {% elif role.role == 'viewer' %}background: #f3e8ff; color: #6b21a8;
-                                 {% else %}background: #f1f5f9; color: #475569;{% endif %}">
+                <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+                    <span class="badge badge-{{ role.role }}" style="
+                        display: inline-block;
+                        padding: 0.25rem 0.75rem;
+                        border-radius: 9999px;
+                        font-size: 0.75rem;
+                        font-weight: 600;
+                        {% if role.role == 'owner' %}background: #dbeafe; color: #1e40af;
+                        {% elif role.role == 'manager' %}background: #dcfce7; color: #166534;
+                        {% elif role.role == 'viewer' %}background: #f3e8ff; color: #6b21a8;
+                        {% elif role.role == 'admin' %}background: #fef3c7; color: #92400e;
+                        {% elif role.role == 'lead' %}background: #fed7aa; color: #c2410c;
+                        {% elif role.role == 'member' %}background: #e0e7ff; color: #3730a3;
+                        {% else %}background: #f1f5f9; color: #475569;{% endif %}
+                    ">
                         {{ role.get_role_display }}
                     </span>
                 </td>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">
+                    {% if role.inheritable %}
+                    <span style="color: #22c55e;">&#10003; Yes</span>
+                    {% else %}
+                    <span style="color: #64748b;">No</span>
+                    {% endif %}
+                </td>
                 {% if can_manage %}
-                <td style="padding: 0.5rem; border-bottom: 1px solid #e2e8f0;">
-                    <form method="post" action="{% url 'rebac:remove_role' tenant_pk=tenant.pk node_pk=node.pk role_pk=role.pk %}"
-                          style="display: inline;"
-                          hx-post="{% url 'rebac:remove_role' tenant_pk=tenant.pk node_pk=node.pk role_pk=role.pk %}"
-                          hx-target="closest tr"
-                          hx-swap="outerHTML">
-                        {% csrf_token %}
-                        <button type="submit"
-                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #ef4444; color: white;
-                                       border: none; border-radius: 4px; cursor: pointer;"
-                                onclick="return confirm('Remove this role?')">
-                            Remove
-                        </button>
-                    </form>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                    <button type="button"
+                            hx-post="{% url 'rebac:remove_role' tenant_pk=tenant.pk node_pk=node.pk role_pk=role.pk %}"
+                            hx-target="#node-roles-{{ node.pk }}"
+                            hx-swap="outerHTML"
+                            hx-confirm="Remove {{ role.user.username }}'s {{ role.get_role_display }} role?"
+                            class="btn btn-danger btn-sm"
+                            style="padding: 0.25rem 0.75rem; font-size: 0.75rem; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <span class="htmx-indicator spinner" style="width: 12px; height: 12px;"></span>
+                        Remove
+                    </button>
                 </td>
                 {% endif %}
             </tr>
@@ -53,6 +73,12 @@
         </tbody>
     </table>
     {% else %}
-    <p style="color: #64748b; padding: 1rem; text-align: center;">No role assignments.</p>
+    <div style="text-align: center; padding: 3rem; color: #64748b;">
+        <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        <p style="font-weight: 500; margin-bottom: 0.5rem;">No role assignments yet</p>
+        <p style="font-size: 0.875rem;">Click "Add Role" above to assign users to this node.</p>
+    </div>
     {% endif %}
 </div>

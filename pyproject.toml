@@ -1,17 +1,40 @@
 [project]
 name = "django-spicedb"
 version = "0.1.0"
-description = ""
+description = "Declarative relationship-based access control (ReBAC) for Django, backed by SpiceDB"
 authors = [
-    {name = "Mohammed R. Ali",email = "flakgun153@gmail.com"}
+    {name = "Mohammed R. Ali", email = "flakgun153@gmail.com"}
 ]
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.11,<4"
-dependencies = [
-    "django (>=5.2.7,<6.0.0)",
-    "authzed (>=1.23.0,<2.0.0)",
-    "grpcio (>=1.75.1,<2.0.0)"
+keywords = ["django", "spicedb", "rebac", "authorization", "permissions", "zanzibar"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Django",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+dependencies = [
+    "django (>=5.0,<6.0.0)",
+    "authzed (>=1.23.0,<2.0.0)",
+    "grpcio (>=1.75.1,<2.0.0)",
+]
+
+[project.urls]
+Homepage = "https://github.com/flak153/django-spicedb"
+Documentation = "https://github.com/flak153/django-spicedb#readme"
+Repository = "https://github.com/flak153/django-spicedb"
+Issues = "https://github.com/flak153/django-spicedb/issues"
 
 [tool.poetry]
 packages = [{ include = "django_rebac" }]
@@ -20,6 +43,8 @@ packages = [{ include = "django_rebac" }]
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
 pytest-django = "^4.11.1"
+playwright = "^1.56.0"
+requests = "^2.32.5"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "example_project.settings"

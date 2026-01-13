@@ -1,56 +1,19 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.test import override_settings
 
 import django_rebac.conf as conf
 from django_rebac.runtime import PermissionEvaluator
 from django_rebac.sync import registry
 
-from example_project.documents.models import Document, Workspace, HierarchyResource
+from example_project.documents.models import Document, Workspace, Folder
 
 
 @pytest.fixture
 def runtime_rebac_setup(recording_adapter):
-    config = {
-        "types": {
-            "user": {"model": "django.contrib.auth.models.User"},
-            "workspace": {
-                "model": "example_project.documents.models.Workspace",
-                "relations": {"member": "user"},
-                "bindings": {"member": {"field": "members", "kind": "m2m"}},
-            },
-            "hierarchy_resource": {
-                "model": "example_project.documents.models.HierarchyResource",
-                "relations": {
-                    "parent": "hierarchy_resource",
-                    "manager": "user",
-                },
-                "permissions": {
-                    "manage": "manager + parent->manage",
-                },
-                "bindings": {
-                    "parent": {"field": "parent", "kind": "fk"},
-                    "manager": {"field": "managers", "kind": "m2m"},
-                },
-            },
-            "document": {
-                "model": "example_project.documents.models.Document",
-                "relations": {
-                    "owner": "user",
-                    "parent": "hierarchy_resource",
-                },
-                "bindings": {
-                    "owner": {"field": "owner", "kind": "fk"},
-                    "parent": {"field": "resource", "kind": "fk"},
-                },
-            },
-        },
-        "db_overrides": False,
-    }
-    with override_settings(REBAC=config):
-        conf.reset_type_graph_cache()
-        registry.refresh()
-        yield
+    """Setup fixture that uses model-based RebacMeta configuration."""
+    conf.reset_type_graph_cache()
+    registry.refresh()
+    yield
     conf.reset_type_graph_cache()
     registry.refresh()
 
@@ -60,12 +23,12 @@ def test_permission_evaluator_can(runtime_rebac_setup, recording_adapter):
     User = get_user_model()
     owner = User.objects.create_user(username="owner", password="pass")
     workspace = Workspace.objects.create(name="Acme")
-    node = HierarchyResource.objects.create(name="Folder")
+    folder = Folder.objects.create(name="My Folder", owner=owner)
     document = Document.objects.create(
         title="Spec",
         owner=owner,
         workspace=workspace,
-        resource=node,
+        folder=folder,
     )
 
     recording_adapter.set_check_response(
@@ -90,11 +53,11 @@ def test_accessible_by(runtime_rebac_setup, recording_adapter):
     User = get_user_model()
     owner = User.objects.create_user(username="owner", password="pass")
     workspace = Workspace.objects.create(name="Acme")
-    node = HierarchyResource.objects.create(name="Folder")
+    folder = Folder.objects.create(name="My Folder", owner=owner)
 
-    doc1 = Document.objects.create(title="A", owner=owner, workspace=workspace, resource=node)
-    doc2 = Document.objects.create(title="B", owner=owner, workspace=workspace, resource=node)
-    Document.objects.create(title="C", owner=owner, workspace=workspace, resource=node)
+    doc1 = Document.objects.create(title="A", owner=owner, workspace=workspace, folder=folder)
+    doc2 = Document.objects.create(title="B", owner=owner, workspace=workspace, folder=folder)
+    Document.objects.create(title="C", owner=owner, workspace=workspace, folder=folder)
 
     recording_adapter.set_lookup_response(
         subject=f"user:{owner.pk}",

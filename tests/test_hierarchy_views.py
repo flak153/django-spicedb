@@ -60,45 +60,25 @@ class MockAdapter:
 
 
 def _test_rebac_config():
-    """REBAC configuration for view tests."""
+    """Minimal REBAC configuration for view tests (types come from models now)."""
     return {
         "tenant_model": "example_project.documents.models.Company",
         "tenant_fk_name": "company",
-        "types": {
-            "user": {"model": "django.contrib.auth.models.User"},
-            "hierarchy_node": {
-                "model": "django_rebac.models.HierarchyNode",
-                "relations": {
-                    "parent": "hierarchy_node",
-                    "owner": "user",
-                    "manager": "user",
-                    "viewer": "user",
-                },
-                "permissions": {
-                    "admin": "owner + parent->admin",
-                    "manage": "manager + admin + parent->manage",
-                    "view": "viewer + manage + parent->view",
-                },
-            },
-        },
-        "db_overrides": False,
     }
 
 
 @pytest.fixture(autouse=True)
-def rebac_config():
-    """Apply REBAC config for all tests in this module."""
+def rebac_setup():
+    """Setup REBAC for all tests in this module."""
     import django_rebac.conf as conf
-    config = _test_rebac_config()
-    with override_settings(REBAC=config):
-        conf.reset_type_graph_cache()
-        yield
+    conf.reset_type_graph_cache()
+    yield
     conf.reset_type_graph_cache()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_adapter():
-    """Mock adapter that tracks permissions."""
+    """Mock adapter that tracks permissions - autouse ensures it's set before any model operations."""
     adapter = MockAdapter()
     factory.set_adapter(adapter)
     yield adapter

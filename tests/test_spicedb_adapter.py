@@ -52,6 +52,27 @@ def _test_graph() -> TypeGraph:
                     "view": "viewer + member + manage + parent->view",
                 },
             },
+            # Include group/verification to maintain schema compatibility
+            "group": {
+                "relations": {
+                    "member": "user",
+                    "manager": "user",
+                },
+                "permissions": {
+                    "view": "member + manager",
+                    "manage": "manager",
+                },
+            },
+            "verification": {
+                "relations": {
+                    "owner": "user",
+                    "parent": "group",
+                },
+                "permissions": {
+                    "view": "owner + parent->view",
+                    "manage": "owner + parent->manage",
+                },
+            },
         }
     )
 
@@ -127,7 +148,7 @@ def test_backfill_batches(spicedb_adapter, ensure_schema) -> None:
     assert {key.key.object.split(":", 1)[1] for key in keys}.issubset(set(resources))
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_hierarchy_manage_permission(spicedb_adapter) -> None:
     adapter = spicedb_adapter
     factory.set_adapter(adapter)

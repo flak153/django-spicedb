@@ -127,6 +127,11 @@ class SpiceDBAdapter(RebacAdapter):
         context: dict | None = None,
         consistency: str | None = None,
     ) -> Iterable[str]:
+        """Find all resources a subject has permission on.
+
+        Example: lookup_resources("user:123", "view", "document")
+        Returns: ["1", "2", "3"] (document IDs user can view)
+        """
         request = perm_pb.LookupResourcesRequest(
             resource_object_type=resource_type,
             permission=relation,
@@ -144,6 +149,51 @@ class SpiceDBAdapter(RebacAdapter):
         )
         for item in stream:
             yield item.resource_object_id
+
+    def lookup_subjects(
+        self,
+        resource: str,
+        permission: str,
+        subject_type: str,
+        *,
+        subject_relation: str = "",
+        context: dict | None = None,
+        consistency: str | None = None,
+    ) -> Iterable[str]:
+        """Find all subjects that have permission on a resource.
+
+        Example: lookup_subjects("document:123", "view", "user")
+        Returns: ["1", "2", "3"] (user IDs who can view the document)
+
+        Args:
+            resource: The resource reference (e.g., "verification:123")
+            permission: The permission to check (e.g., "view")
+            subject_type: Type of subjects to find (e.g., "user")
+            subject_relation: Optional relation on subject (e.g., "member")
+            context: Optional context for caveats
+            consistency: Consistency mode
+        """
+        resource_type, resource_id = _parse_object(resource)
+
+        request = perm_pb.LookupSubjectsRequest(
+            resource=_build_object(resource_type, resource_id),
+            permission=permission,
+            subject_object_type=subject_type,
+        )
+
+        if subject_relation:
+            request.optional_subject_relation = subject_relation
+        if context:
+            request.context.update(context)
+        if consistency:
+            request.consistency.CopyFrom(_consistency(consistency))
+
+        stream = self._permission_client.LookupSubjects(
+            request,
+            metadata=self._metadata,
+        )
+        for item in stream:
+            yield item.subject.subject_object_id
 
     def delete_all_relationships(self, resource_type: str) -> None:
         """Delete all relationships for a resource type.

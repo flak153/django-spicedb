@@ -116,44 +116,13 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# ReBAC configuration - type definitions are now on models via RebacMeta
 REBAC = {
-    "types": {
-        "user": {
-            "model": "django.contrib.auth.models.User",
-        },
-        "hierarchy_resource": {
-            "model": "example_project.documents.models.HierarchyResource",
-            "relations": {
-                "parent": "hierarchy_resource",
-                "manager": "user",
-            },
-            "permissions": {
-                "manage": "manager + parent->manage",
-            },
-            "bindings": {
-                "parent": {"field": "parent", "kind": "fk"},
-                "manager": {"field": "managers", "kind": "m2m"},
-            },
-        },
-        "document": {
-            "model": "example_project.documents.models.Document",
-            "relations": {
-                "owner": "user",
-                "parent": "hierarchy_resource",
-            },
-            "permissions": {
-                "view": "owner + parent->manage",
-            },
-            "bindings": {
-                "owner": {"field": "owner", "kind": "fk"},
-                "parent": {"field": "resource", "kind": "fk"},
-            },
-        },
-    },
+    "tenant_model": "example_project.documents.models.Company",
+    "tenant_fk_name": "company",
     "adapter": {
         "endpoint": os.environ.get("SPICEDB_ENDPOINT", "localhost:50051"),
         "token": os.environ.get("SPICEDB_PRESHARED_KEY", "devkey"),
         "insecure": True,
     },
-    "db_overrides": False,
 }

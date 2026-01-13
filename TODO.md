@@ -170,6 +170,16 @@ definition hierarchy_node {
 - [ ] Expand tests for group membership, delete cascades, and optional parent edges.
 - [ ] Batch tuple writes: collect per-request, flush to SpiceDB in single call.
 
+## V2 Fixes (Ready List)
+- [ ] Optional startup validator: warn when `subject_field`/`object_field` are not unique or editable; add a config flag to silence.
+- [ ] Opt-in tuple refresh for related attribute changes: related-model signal + targeted backfill query for affected tuples.
+- [ ] Signal registration test helper: context manager to connect/disconnect signals and restore `_REGISTERED` deterministically.
+- [ ] Delete cleanup for `object_field`: ensure deletes on FK change and on model delete for tuples written on related objects.
+- [ ] Drift repair command: compute expected tuples from DB, diff with SpiceDB, then write/delete to reconcile.
+- [ ] Pre-save optimization: skip old FK fetch when `update_fields` excludes tracked FKs; handle `None` safely.
+- [ ] Strict config schema validation: verify fields exist, kinds are valid, and subject/object targets resolve.
+- [ ] Observability hooks: structured events for writes/deletes/errors with counts and latency.
+
 ## Adapter & Runtime Polishing
 - [ ] Add tests covering `django_rebac.adapters.factory` (configuration, reset).
 - [ ] Enhance `PermissionEvaluator` to accept injected adapters, context merging, consistency options.

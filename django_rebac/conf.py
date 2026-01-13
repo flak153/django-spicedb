@@ -1,4 +1,4 @@
-"""Configuration helpers for django-spicedb."""
+"""Configuration helpers for django-rebac."""
 
 from __future__ import annotations
 
@@ -15,18 +15,26 @@ _MODEL_TYPE_CACHE: MutableMapping[str, str] = {}
 
 
 def get_type_graph() -> TypeGraph:
-    """Return the cached :class:`TypeGraph` built from Django settings."""
+    """
+    Return the cached TypeGraph built from registered RebacModels.
 
+    The TypeGraph is built by introspecting all Django models that have
+    a RebacMeta inner class defined.
+    """
     global _TYPE_GRAPH_CACHE
 
     if _TYPE_GRAPH_CACHE is not None:
         return _TYPE_GRAPH_CACHE
 
-    config = _get_rebac_settings()
-    types_config = _collect_type_configs(config)
+    from .core import build_type_configs_from_registry
+
+    types_config = build_type_configs_from_registry()
 
     if not types_config:
-        raise ImproperlyConfigured("No type definitions available for TypeGraph.")
+        raise ImproperlyConfigured(
+            "No ReBAC models found. Ensure your models inherit from RebacModel "
+            "and have a RebacMeta inner class defined."
+        )
 
     graph = TypeGraph(types_config)
     _rebuild_model_cache(graph)
@@ -35,60 +43,38 @@ def get_type_graph() -> TypeGraph:
 
 
 def reset_type_graph_cache() -> None:
-    """Clear the cached ``TypeGraph``. Primarily intended for tests."""
-
+    """Clear the cached TypeGraph. Primarily intended for tests."""
     global _TYPE_GRAPH_CACHE, _MODEL_TYPE_CACHE
     _TYPE_GRAPH_CACHE = None
     _MODEL_TYPE_CACHE = {}
 
 
-def _get_rebac_settings() -> MutableMapping[str, Any]:
+def get_rebac_settings() -> MutableMapping[str, Any]:
+    """
+    Return the REBAC settings dict.
+
+    Only adapter configuration is required:
+
+        REBAC = {
+            "adapter": {
+                "endpoint": "localhost:50051",
+                "token": "your-token",
+                "insecure": True,
+            },
+        }
+    """
     value = getattr(settings, "REBAC", None)
     if value is None:
-        raise ImproperlyConfigured("settings.REBAC must be defined.")
+        return {}
     if not isinstance(value, MutableMapping):
         raise ImproperlyConfigured("settings.REBAC must be a mapping.")
     return value
 
 
-import yaml
-import os
-
-def _collect_type_configs(config: Mapping[str, Any]) -> MutableMapping[str, Any]:
-    merged: MutableMapping[str, Any] = {}
-
-    # Priority 1: Load from YAML file if exists
-    yaml_path = config.get('POLICY_FILE', 'rebac_policy.yaml')
-    if os.path.exists(yaml_path):
-        with open(yaml_path, 'r') as f:
-            yaml_data = yaml.safe_load(f)
-            yaml_types = yaml_data.get('types', {})
-            for name, value in yaml_types.items():
-                if isinstance(value, Mapping):
-                    merged[name] = dict(value)
-        return merged  # YAML takes full precedence; early return
-
-    # Priority 2: DB overrides if enabled
-    if config.get("db_overrides"):
-        from django_rebac.models import TypeDefinition
-
-        for type_def in TypeDefinition.objects.filter(is_active=True):
-            merged[type_def.name] = type_def.as_dict()
-
-    # Priority 3: Fallback to settings
-    base_types = config.get("types", {})
-    if not isinstance(base_types, Mapping):
-        raise ImproperlyConfigured("settings.REBAC['types'] must be a mapping.")
-
-    for name, value in base_types.items():
-        if isinstance(value, Mapping):
-            if name not in merged:  # Only add if not overridden
-                merged[name] = dict(value)
-
-    if not merged:
-        raise ImproperlyConfigured("No type definitions available from YAML, DB, or settings.")
-
-    return merged
+def get_adapter_settings() -> Mapping[str, Any]:
+    """Return the adapter configuration from settings."""
+    config = get_rebac_settings()
+    return config.get("adapter", {})
 
 
 def get_type_for_model(model: Type[Any] | str) -> str:
@@ -97,7 +83,6 @@ def get_type_for_model(model: Type[Any] | str) -> str:
 
     Raises ImproperlyConfigured if the model is not associated with any type.
     """
-
     if isinstance(model, str):
         model_path = model
     else:
@@ -114,7 +99,7 @@ def get_type_for_model(model: Type[Any] | str) -> str:
 
     raise ImproperlyConfigured(
         f"No REBAC type configured for model {model_path!r}. "
-        "Ensure settings.REBAC includes a type with this model."
+        "Ensure the model inherits from RebacModel and has RebacMeta defined."
     )
 
 
@@ -141,7 +126,7 @@ def get_tenant_model() -> Type[Any]:
         ValueError: If ``tenant_model`` is not configured in settings.
         ImproperlyConfigured: If the model cannot be imported.
     """
-    config = _get_rebac_settings()
+    config = get_rebac_settings()
     tenant_model_path = config.get("tenant_model")
 
     if not tenant_model_path:
@@ -178,5 +163,5 @@ def get_tenant_fk_name() -> str:
     Configure via ``REBAC['tenant_fk_name'] = 'company'``.
     Defaults to ``'tenant'`` if not configured.
     """
-    config = _get_rebac_settings()
+    config = get_rebac_settings()
     return config.get("tenant_fk_name", "tenant")

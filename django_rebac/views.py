@@ -79,6 +79,9 @@ class PermissionRequiredMixin:
 
     def check_permission(self, request: HttpRequest, node: HierarchyNode) -> bool:
         """Check if user has required permission on node."""
+        # Superusers and staff bypass permission checks
+        if request.user.is_superuser or request.user.is_staff:
+            return True
         with tenant_context(self.tenant):  # type: ignore[attr-defined]
             evaluator = TenantAwarePermissionEvaluator(
                 request.user,
@@ -120,14 +123,20 @@ class HierarchyTreeView(TenantPermissionMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         # Get accessible nodes for the current user
-        with tenant_context(self.tenant):
-            accessible_nodes = HierarchyNode.objects.accessible_by(
-                self.request.user,
-                "view",
-            ).filter(
-                tenant_content_type=self.tenant_ct,
-                tenant_object_id=str(self.tenant.pk),
+        # Superusers and staff bypass permission filtering
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            accessible_nodes = self.get_tenant_nodes().select_related(
+                "hierarchy_type", "parent"
             )
+        else:
+            with tenant_context(self.tenant):
+                accessible_nodes = HierarchyNode.objects.accessible_by(
+                    self.request.user,
+                    "view",
+                ).filter(
+                    tenant_content_type=self.tenant_ct,
+                    tenant_object_id=str(self.tenant.pk),
+                )
 
         # Build tree structure
         context["hierarchy_tree"] = self._build_tree(accessible_nodes)
@@ -212,9 +221,17 @@ class NodeDetailView(TenantPermissionMixin, TemplateView):
         context["tenant"] = self.tenant
 
         # Check if user can manage (for showing edit controls)
-        with tenant_context(self.tenant):
-            evaluator = TenantAwarePermissionEvaluator(self.request.user, tenant=self.tenant)
-            context["can_manage"] = evaluator.can("manage", self.node)
+        # Superusers and staff can manage all nodes
+        if self.request.user.is_superuser or self.request.user.is_staff:
+            context["can_manage"] = True
+        else:
+            with tenant_context(self.tenant):
+                evaluator = TenantAwarePermissionEvaluator(self.request.user, tenant=self.tenant)
+                context["can_manage"] = evaluator.can("manage", self.node)
+
+        # Available users for role assignment (exclude already assigned)
+        assigned_user_ids = context["roles"].values_list("user_id", flat=True)
+        context["available_users"] = User.objects.exclude(pk__in=assigned_user_ids)[:50]
 
         return context
 
@@ -250,7 +267,23 @@ class AssignRoleView(TenantPermissionMixin, View):
             defaults={"created_by": request.user},
         )
 
-        # Redirect back to node detail
+        # For HTMX requests, return the updated roles partial
+        if request.headers.get("HX-Request"):
+            roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
+            if request.user.is_superuser or request.user.is_staff:
+                can_manage = True
+            else:
+                with tenant_context(self.tenant):
+                    evaluator = TenantAwarePermissionEvaluator(request.user, tenant=self.tenant)
+                    can_manage = evaluator.can("manage", node)
+            return render(request, "django_rebac/partials/_node_roles.html", {
+                "node": node,
+                "roles": roles,
+                "can_manage": can_manage,
+                "tenant": self.tenant,
+            })
+
+        # Regular request: redirect back to node detail
         return redirect("rebac:node_detail", tenant_pk=self.tenant.pk, node_pk=node.pk)
 
 
@@ -273,6 +306,22 @@ class RemoveRoleView(TenantPermissionMixin, View):
             role.delete()
         except HierarchyNodeRole.DoesNotExist:
             return HttpResponse("Role not found", status=404)
+
+        # For HTMX requests, return the updated roles partial
+        if request.headers.get("HX-Request"):
+            roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
+            if request.user.is_superuser or request.user.is_staff:
+                can_manage = True
+            else:
+                with tenant_context(self.tenant):
+                    evaluator = TenantAwarePermissionEvaluator(request.user, tenant=self.tenant)
+                    can_manage = evaluator.can("manage", node)
+            return render(request, "django_rebac/partials/_node_roles.html", {
+                "node": node,
+                "roles": roles,
+                "can_manage": can_manage,
+                "tenant": self.tenant,
+            })
 
         return redirect("rebac:node_detail", tenant_pk=self.tenant.pk, node_pk=node.pk)
 
@@ -577,12 +626,16 @@ class PartialNodeRolesView(TenantPermissionMixin, View):
         node, has_perm = self.check_node_permission(request, node_pk)
 
         if not node or not has_perm:
-            context = {"roles": [], "node": None, "can_manage": False}
+            context = {"roles": [], "node": None, "can_manage": False, "tenant": self.tenant}
         else:
             roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
-            with tenant_context(self.tenant):
-                evaluator = TenantAwarePermissionEvaluator(request.user, tenant=self.tenant)
-                can_manage = evaluator.can("manage", node)
+            # Superusers and staff can manage all nodes
+            if request.user.is_superuser or request.user.is_staff:
+                can_manage = True
+            else:
+                with tenant_context(self.tenant):
+                    evaluator = TenantAwarePermissionEvaluator(request.user, tenant=self.tenant)
+                    can_manage = evaluator.can("manage", node)
 
             context = {
                 "node": node,

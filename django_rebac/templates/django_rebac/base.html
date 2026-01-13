@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hierarchy Management{% endblock %}</title>
+    <!-- HTMX 2.0 -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -132,6 +134,33 @@
             margin-bottom: 2rem;
         }
         nav a { color: var(--text); text-decoration: none; font-weight: 500; }
+        /* HTMX loading states */
+        .htmx-request { opacity: 0.7; pointer-events: none; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        /* Toast notifications */
+        .toast-container {
+            position: fixed; bottom: 1rem; right: 1rem;
+            z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        .toast {
+            padding: 0.75rem 1rem; border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        .toast-success { background: #22c55e; color: white; }
+        .toast-error { background: #ef4444; color: white; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } }
         {% block extra_styles %}{% endblock %}
     </style>
 </head>
@@ -147,6 +176,33 @@
         {% endif %}
         {% block content %}{% endblock %}
     </div>
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // HTMX event handlers for notifications
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            // Check for success message in response headers
+            const msg = evt.detail.xhr.getResponseHeader('HX-Trigger-After-Swap');
+            if (msg) showToast(msg, 'success');
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            showToast('An error occurred. Please try again.', 'error');
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Expose for manual use
+        window.RebacUI = { showToast };
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
