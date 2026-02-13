@@ -35,12 +35,18 @@ poetry run pytest tests/test_type_graph.py::test_function_name -v
 
 # Lint and type check
 poetry run ruff check
-poetry run mypy django_rebac
+poetry run mypy django_spicedb
 ```
 
 ## Architecture
 
-### Package Structure (`django_rebac/`)
+### Package Structure (`django_spicedb/`)
+
+- **models/** - Django models (package)
+  - `base.py` - `RebacModelBase` metaclass, `RebacModel` base class
+  - `config.py` - `TypeDefinition`, `Grant`, `Job`, `AuditLog`
+  - `resources.py` - `Resource`, `ResourceNode`
+  - `hierarchy.py` - `HierarchyTypeDefinition`, `HierarchyNode`, `HierarchyNodeRole`
 
 - **types/** - TypeGraph registry that validates configuration and compiles to SpiceDB schema DSL
   - `graph.py` - Core TypeGraph class with validation (parent cycles, relation subjects, permission expressions, bindings)
@@ -51,8 +57,8 @@ poetry run mypy django_rebac
   - `factory.py` - Adapter factory for dependency injection
 
 - **sync/** - Tuple synchronization between Django and SpiceDB
-  - `registry.py` - Watches `post_save`, `post_delete`, `m2m_changed` signals; emits tuple writes/deletes based on configured bindings
-  - `backfill.py` - Batch backfill of tuples from existing Django data
+  - `registry.py` - Watches `post_save`, `post_delete`, `m2m_changed` signals; emits tuple writes/deletes based on configured bindings. Supports through-table bindings with automatic role-based signal handlers.
+  - `backfill.py` - Batch backfill of tuples from existing Django data (including through-table tuples)
 
 - **runtime/** - Permission evaluation
   - `evaluator.py` - `PermissionEvaluator` class (request-scoped, batched checks, caching) and `can()` convenience function
@@ -61,6 +67,8 @@ poetry run mypy django_rebac
   - `orm.py` - `RebacManager` and `RebacQuerySet` with `.accessible_by(user, relation)` method
 
 - **conf.py** - Settings loader for `settings.REBAC`
+
+- **checks.py** - Django system checks that validate ReBAC configuration at startup (field references, through-table config)
 
 ### Key Concepts
 

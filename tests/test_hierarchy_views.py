@@ -20,8 +20,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from django_rebac.adapters import factory
-from django_rebac.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
+from django_spicedb.adapters import factory
+from django_spicedb.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
 
 from example_project.documents.models import Company
 
@@ -70,7 +70,7 @@ def _test_rebac_config():
 @pytest.fixture(autouse=True)
 def rebac_setup():
     """Setup REBAC for all tests in this module."""
-    import django_rebac.conf as conf
+    import django_spicedb.conf as conf
     conf.reset_type_graph_cache()
     yield
     conf.reset_type_graph_cache()

@@ -3,8 +3,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-import django_rebac.conf as conf
-from django_rebac.sync import registry
+import django_spicedb.conf as conf
+from django_spicedb.sync import registry
 
 from example_project.documents.models import Group, GroupMembership, Verification
 

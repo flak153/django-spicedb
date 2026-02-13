@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError
 
-from django_rebac.models import (
+from django_spicedb.models import (
     HierarchyNode,
     HierarchyNodeRole,
     HierarchyTypeDefinition,

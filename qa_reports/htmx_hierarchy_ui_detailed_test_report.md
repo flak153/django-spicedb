@@ -246,8 +246,8 @@ Response Status Error Code 500 from /rebac/5/partial/node/9/roles/
 5. Verify database queries in role fetching
 
 **Potential Fix Locations:**
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/views.py:609-633` (PartialNodeRolesView)
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/tenant.py` (TenantAwarePermissionEvaluator)
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/views.py:609-633` (PartialNodeRolesView)
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/tenant.py` (TenantAwarePermissionEvaluator)
 
 ### Priority 2: HIGH - Add Error Logging
 
@@ -346,12 +346,12 @@ All screenshots saved to `/tmp/`:
 
 ### Appendix C: Key Files Reviewed
 
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/views.py`
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/urls.py`
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/templates/django_rebac/base.html`
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/templates/django_rebac/hierarchy_tree.html`
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/templates/django_rebac/node_detail.html`
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/templates/django_rebac/partials/_node_roles.html`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/views.py`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/urls.py`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/templates/django_spicedb/base.html`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/templates/django_spicedb/hierarchy_tree.html`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/templates/django_spicedb/node_detail.html`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/templates/django_spicedb/partials/_node_roles.html`
 
 ---
 

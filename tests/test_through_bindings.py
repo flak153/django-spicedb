@@ -3,11 +3,11 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-import django_rebac.conf as conf
-from django_rebac.core import build_type_configs_from_registry
-from django_rebac.sync import registry
-from django_rebac.sync.backfill import generate_through_tuples
-from django_rebac.types.graph import TypeGraph, TypeGraphError
+import django_spicedb.conf as conf
+from django_spicedb.core import build_type_configs_from_registry
+from django_spicedb.sync import registry
+from django_spicedb.sync.backfill import generate_through_tuples
+from django_spicedb.types.graph import TypeGraph, TypeGraphError
 
 from example_project.documents.models import Group, GroupMembership, Verification
 

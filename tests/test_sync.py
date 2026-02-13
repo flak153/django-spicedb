@@ -3,15 +3,15 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 
-import django_rebac.conf as conf
-from django_rebac.sync import registry
-from django_rebac.sync.registry import (
+import django_spicedb.conf as conf
+from django_spicedb.sync import registry
+from django_spicedb.sync.registry import (
     _get_fk_value,
     _gather_tuple_writes,
     _parse_subject,
     _format_subject,
 )
-from django_rebac.types.graph import TypeConfig
+from django_spicedb.types.graph import TypeConfig
 
 from example_project.documents.models import Document, Workspace, Folder, HierarchyResource
 
@@ -442,7 +442,7 @@ class TestSubjectFieldObjectFieldRealSignals:
         receives correct delete (old username) and write (new username).
         """
         from django.db.models.signals import pre_save, post_save, post_delete
-        from django_rebac.sync.registry import _register_model, _disconnect_all, _REGISTERED
+        from django_spicedb.sync.registry import _register_model, _disconnect_all, _REGISTERED
 
         User = get_user_model()
         alice = User.objects.create_user(username="alice", password="pass")
@@ -523,7 +523,7 @@ class TestSubjectFieldObjectFieldRealSignals:
         triggers actual saves, verifies delete uses old parent.pk.
         """
         from django.db.models.signals import pre_save, post_save, post_delete
-        from django_rebac.sync.registry import _register_model, _disconnect_all, _REGISTERED
+        from django_spicedb.sync.registry import _register_model, _disconnect_all, _REGISTERED
 
         User = get_user_model()
         owner = User.objects.create_user(username="owner", password="pass")
@@ -602,7 +602,7 @@ class TestSubjectFieldObjectFieldRealSignals:
         Test REAL signal flow: null→value transition doesn't delete type:None.
         """
         from django.db.models.signals import pre_save, post_save, post_delete
-        from django_rebac.sync.registry import _register_model, _disconnect_all, _REGISTERED
+        from django_spicedb.sync.registry import _register_model, _disconnect_all, _REGISTERED
 
         User = get_user_model()
         owner = User.objects.create_user(username="owner", password="pass")

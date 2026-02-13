@@ -1,5 +1,5 @@
-from django_rebac.schema import compile_schema
-from django_rebac.types import TypeGraph
+from django_spicedb.schema import compile_schema
+from django_spicedb.types import TypeGraph
 
 
 def test_compile_schema_returns_digest() -> None:

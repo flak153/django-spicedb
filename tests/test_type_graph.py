@@ -1,7 +1,7 @@
 import pytest
 
-from django_rebac.types import TypeGraph
-from django_rebac.types.graph import (
+from django_spicedb.types import TypeGraph
+from django_spicedb.types.graph import (
     InvalidPermissionExpression,
     TypeGraphError,
     UnknownParentError,

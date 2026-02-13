@@ -142,7 +142,7 @@
       "priority": "P0",
       "title": "Fix 500 Internal Server Error",
       "description": "Debug and fix the server error in PartialNodeRolesView that prevents role loading",
-      "file": "/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/views.py",
+      "file": "/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/views.py",
       "line_range": "609-633",
       "action": "Add error logging, check TenantAwarePermissionEvaluator, verify tenant_context"
     },

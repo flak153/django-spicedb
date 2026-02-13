@@ -4,14 +4,14 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 
-import django_rebac.conf as conf
-from django_rebac.adapters import factory
-from django_rebac.adapters.base import TupleKey, TupleWrite
-from django_rebac.runtime import PermissionEvaluator
-from django_rebac.schema import publish_schema
-from django_rebac.sync import registry
-from django_rebac.sync.backfill import backfill_tuples
-from django_rebac.types import TypeGraph
+import django_spicedb.conf as conf
+from django_spicedb.adapters import factory
+from django_spicedb.adapters.base import TupleKey, TupleWrite
+from django_spicedb.runtime import PermissionEvaluator
+from django_spicedb.schema import publish_schema
+from django_spicedb.sync import registry
+from django_spicedb.sync.backfill import backfill_tuples
+from django_spicedb.types import TypeGraph
 
 from example_project.documents.models import HierarchyResource
 

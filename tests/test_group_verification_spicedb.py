@@ -11,8 +11,8 @@ These tests verify the full end-to-end flow:
 import pytest
 from django.contrib.auth import get_user_model
 
-import django_rebac.conf as conf
-from django_rebac.adapters.base import TupleKey, TupleWrite
+import django_spicedb.conf as conf
+from django_spicedb.adapters.base import TupleKey, TupleWrite
 
 from example_project.documents.models import Group, GroupMembership, Verification
 
@@ -407,9 +407,9 @@ class TestDjangoModelIntegration:
 
     def test_group_membership_creates_tuple(self, spicedb_adapter):
         """Creating GroupMembership via Django should sync tuple to SpiceDB."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -451,9 +451,9 @@ class TestDjangoModelIntegration:
 
     def test_manager_membership_creates_tuple(self, spicedb_adapter):
         """Creating manager GroupMembership should grant manage permission."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -492,9 +492,9 @@ class TestDjangoModelIntegration:
 
     def test_role_change_updates_permissions(self, spicedb_adapter):
         """Changing role from member to manager should update SpiceDB."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -545,9 +545,9 @@ class TestDjangoModelIntegration:
 
     def test_membership_delete_revokes_permissions(self, spicedb_adapter):
         """Deleting GroupMembership should revoke permissions in SpiceDB."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -590,9 +590,9 @@ class TestDjangoModelIntegration:
 
     def test_verification_inherits_from_group_via_django(self, spicedb_adapter):
         """Creating Verification via Django should inherit group permissions."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -666,9 +666,9 @@ class TestMultiGroupScenarios:
 
     def test_user_in_multiple_groups_different_roles(self, spicedb_adapter):
         """User can be member in one group, manager in another."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -704,9 +704,9 @@ class TestMultiGroupScenarios:
 
     def test_verification_group_change(self, spicedb_adapter):
         """Moving verification to different group should update permissions."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -745,9 +745,9 @@ class TestMultiGroupScenarios:
 
     def test_lookup_resources_across_groups(self, spicedb_adapter):
         """lookup_resources should return verifications from all user's groups."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -793,9 +793,9 @@ class TestEdgeCases:
 
     def test_empty_group_no_access(self, spicedb_adapter):
         """Verification in empty group should only be accessible by owner."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -823,9 +823,9 @@ class TestEdgeCases:
 
     def test_demote_manager_to_member(self, spicedb_adapter):
         """Demoting manager to member should revoke manage permission."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -858,9 +858,9 @@ class TestEdgeCases:
 
     def test_verification_owner_change(self, spicedb_adapter):
         """Changing verification owner should update permissions."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()
@@ -893,9 +893,9 @@ class TestEdgeCases:
 
     def test_bulk_membership_operations(self, spicedb_adapter):
         """Test adding multiple users to group."""
-        from django_rebac.adapters import factory
-        from django_rebac.sync import registry
-        import django_rebac.conf as conf
+        from django_spicedb.adapters import factory
+        from django_spicedb.sync import registry
+        import django_spicedb.conf as conf
 
         factory.set_adapter(spicedb_adapter)
         conf.reset_type_graph_cache()

@@ -14,10 +14,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-import django_rebac.conf as conf
-from django_rebac.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
-from django_rebac.sync import registry
-from django_rebac.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
+import django_spicedb.conf as conf
+from django_spicedb.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
+from django_spicedb.sync import registry
+from django_spicedb.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
 
 from example_project.documents.models import Company
 
@@ -36,7 +36,7 @@ def tenant_settings():
         "types": {
             "user": {"model": "django.contrib.auth.models.User"},
             "hierarchy_node": {
-                "model": "django_rebac.models.HierarchyNode",
+                "model": "django_spicedb.models.HierarchyNode",
                 "relations": {
                     "parent": "hierarchy_node",
                     "manager": "user",
@@ -130,7 +130,7 @@ class TestTenantConfiguration:
         with override_settings(REBAC=tenant_settings):
             conf.reset_type_graph_cache()
 
-            from django_rebac.conf import get_tenant_model
+            from django_spicedb.conf import get_tenant_model
 
             tenant_model = get_tenant_model()
             assert tenant_model is Company
@@ -144,7 +144,7 @@ class TestTenantConfiguration:
         with override_settings(REBAC=settings_without_tenant):
             conf.reset_type_graph_cache()
 
-            from django_rebac.conf import get_tenant_model
+            from django_spicedb.conf import get_tenant_model
 
             with pytest.raises(ValueError, match="tenant_model"):
                 get_tenant_model()
@@ -155,7 +155,7 @@ class TestTenantConfiguration:
         with override_settings(REBAC=tenant_settings):
             conf.reset_type_graph_cache()
 
-            from django_rebac.conf import get_tenant_content_type
+            from django_spicedb.conf import get_tenant_content_type
 
             ct = get_tenant_content_type()
             assert ct.model_class() is Company
@@ -166,7 +166,7 @@ class TestTenantConfiguration:
         with override_settings(REBAC=tenant_settings):
             conf.reset_type_graph_cache()
 
-            from django_rebac.conf import get_tenant_fk_name
+            from django_spicedb.conf import get_tenant_fk_name
 
             assert get_tenant_fk_name() == "company"
 
@@ -179,7 +179,7 @@ class TestTenantConfiguration:
         with override_settings(REBAC=settings_without_fk_name):
             conf.reset_type_graph_cache()
 
-            from django_rebac.conf import get_tenant_fk_name
+            from django_spicedb.conf import get_tenant_fk_name
 
             assert get_tenant_fk_name() == "tenant"
 
@@ -397,7 +397,7 @@ class TestTenantAwarePermissionEvaluation:
                 result=True,  # SpiceDB says yes
             )
 
-            from django_rebac.tenant import TenantAwarePermissionEvaluator
+            from django_spicedb.tenant import TenantAwarePermissionEvaluator
 
             # User trying to access from other_company context
             evaluator = TenantAwarePermissionEvaluator(user, tenant=other_company)
@@ -430,7 +430,7 @@ class TestTenantAwarePermissionEvaluation:
                 result=True,
             )
 
-            from django_rebac.tenant import TenantAwarePermissionEvaluator
+            from django_spicedb.tenant import TenantAwarePermissionEvaluator
 
             evaluator = TenantAwarePermissionEvaluator(user, tenant=company)
 
@@ -445,8 +445,8 @@ class TestTenantAwarePermissionEvaluation:
         with override_settings(REBAC=tenant_settings):
             conf.reset_type_graph_cache()
 
-            from django_rebac.tenant import TenantAwarePermissionEvaluator
-            from django_rebac.runtime import PermissionEvaluator
+            from django_spicedb.tenant import TenantAwarePermissionEvaluator
+            from django_spicedb.runtime import PermissionEvaluator
 
             evaluator = TenantAwarePermissionEvaluator(user, tenant=company)
 
@@ -473,7 +473,7 @@ class TestTenantContext:
     @pytest.mark.django_db
     def test_set_and_get_current_tenant(self, company):
         """Can set and get current tenant via thread-local."""
-        from django_rebac.tenant import get_current_tenant, set_current_tenant, clear_current_tenant
+        from django_spicedb.tenant import get_current_tenant, set_current_tenant, clear_current_tenant
 
         # Initially None
         assert get_current_tenant() is None
@@ -487,7 +487,7 @@ class TestTenantContext:
     @pytest.mark.django_db
     def test_tenant_context_manager(self, company, other_company):
         """Context manager scopes tenant and restores previous."""
-        from django_rebac.tenant import get_current_tenant, tenant_context, set_current_tenant
+        from django_spicedb.tenant import get_current_tenant, tenant_context, set_current_tenant
 
         set_current_tenant(company)
 
@@ -500,7 +500,7 @@ class TestTenantContext:
     @pytest.mark.django_db
     def test_tenant_context_manager_clears_on_exit(self, company):
         """Context manager clears tenant if none was set before."""
-        from django_rebac.tenant import get_current_tenant, tenant_context, clear_current_tenant
+        from django_spicedb.tenant import get_current_tenant, tenant_context, clear_current_tenant
 
         clear_current_tenant()
 
@@ -559,7 +559,7 @@ class TestHierarchyAccessibleBy:
                 results=[str(node1.pk), str(node2.pk)],
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             with tenant_context(company):
                 qs = HierarchyNode.objects.accessible_by(user, "view")
@@ -609,7 +609,7 @@ class TestHierarchyAccessibleBy:
                 results=[str(node1.pk), str(node2.pk)],
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             # Query in company context - should only see company's node
             with tenant_context(company):
@@ -661,7 +661,7 @@ class TestHierarchyLookupHelper:
                 results=[str(node1.pk), str(node2.pk)],
             )
 
-            from django_rebac.tenant import TenantHierarchyLookup
+            from django_spicedb.tenant import TenantHierarchyLookup
 
             lookup = TenantHierarchyLookup(user, company)
             accessible_ids = lookup.get_accessible_hierarchy_nodes("view")
@@ -690,7 +690,7 @@ class TestHierarchyLookupHelper:
                 results=[str(node1.pk)],
             )
 
-            from django_rebac.tenant import TenantHierarchyLookup
+            from django_spicedb.tenant import TenantHierarchyLookup
 
             lookup = TenantHierarchyLookup(user, company)
 

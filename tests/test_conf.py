@@ -1,11 +1,11 @@
-"""Tests for django_rebac.conf module with model-centric configuration."""
+"""Tests for django_spicedb.conf module with model-centric configuration."""
 
 import pytest
 from django.test import override_settings
 
-import django_rebac.conf as conf
-from django_rebac.core import clear_rebac_model_registry, register_type
-from django_rebac.types import TypeGraph
+import django_spicedb.conf as conf
+from django_spicedb.core import clear_rebac_model_registry, register_type
+from django_spicedb.types import TypeGraph
 
 
 @pytest.fixture(autouse=True)

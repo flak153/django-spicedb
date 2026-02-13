@@ -37,7 +37,7 @@ Repository = "https://github.com/flak153/django-spicedb"
 Issues = "https://github.com/flak153/django-spicedb/issues"
 
 [tool.poetry]
-packages = [{ include = "django_rebac" }]
+packages = [{ include = "django_spicedb" }]
 
 
 [tool.poetry.group.dev.dependencies]
@@ -45,6 +45,7 @@ pytest = "^8.4.2"
 pytest-django = "^4.11.1"
 playwright = "^1.56.0"
 requests = "^2.32.5"
+ruff = "^0.15.1"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "example_project.settings"

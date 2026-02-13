@@ -24,9 +24,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-import django_rebac.conf as conf
-from django_rebac.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
-from django_rebac.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
+import django_spicedb.conf as conf
+from django_spicedb.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
+from django_spicedb.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
 
 from example_project.documents.models import Company
 
@@ -51,7 +51,7 @@ def tenant_settings():
         "types": {
             "user": {"model": "django.contrib.auth.models.User"},
             "hierarchy_node": {
-                "model": "django_rebac.models.HierarchyNode",
+                "model": "django_spicedb.models.HierarchyNode",
                 "relations": {
                     "parent": "hierarchy_node",
                     "admin": "user",
@@ -207,7 +207,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_type_definition_admin_registered(self, admin_site):
         """HierarchyTypeDefinition should be registered in admin."""
-        from django_rebac.admin import HierarchyTypeDefinitionAdmin
+        from django_spicedb.admin import HierarchyTypeDefinitionAdmin
 
         admin_site.register(HierarchyTypeDefinition, HierarchyTypeDefinitionAdmin)
         assert HierarchyTypeDefinition in admin_site._registry
@@ -215,7 +215,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_type_definition_list_display(self, admin_site):
         """HierarchyTypeDefinition admin has proper list display."""
-        from django_rebac.admin import HierarchyTypeDefinitionAdmin
+        from django_spicedb.admin import HierarchyTypeDefinitionAdmin
 
         admin = HierarchyTypeDefinitionAdmin(HierarchyTypeDefinition, admin_site)
 
@@ -227,7 +227,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_type_definition_list_filter(self, admin_site):
         """HierarchyTypeDefinition admin has proper filters."""
-        from django_rebac.admin import HierarchyTypeDefinitionAdmin
+        from django_spicedb.admin import HierarchyTypeDefinitionAdmin
 
         admin = HierarchyTypeDefinitionAdmin(HierarchyTypeDefinition, admin_site)
 
@@ -238,7 +238,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_node_admin_registered(self, admin_site):
         """HierarchyNode should be registered in admin."""
-        from django_rebac.admin import HierarchyNodeAdmin
+        from django_spicedb.admin import HierarchyNodeAdmin
 
         admin_site.register(HierarchyNode, HierarchyNodeAdmin)
         assert HierarchyNode in admin_site._registry
@@ -246,7 +246,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_node_list_display(self, admin_site):
         """HierarchyNode admin has proper list display."""
-        from django_rebac.admin import HierarchyNodeAdmin
+        from django_spicedb.admin import HierarchyNodeAdmin
 
         admin = HierarchyNodeAdmin(HierarchyNode, admin_site)
 
@@ -258,7 +258,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_node_has_role_inline(self, admin_site):
         """HierarchyNode admin has HierarchyNodeRole as inline."""
-        from django_rebac.admin import HierarchyNodeAdmin, HierarchyNodeRoleInline
+        from django_spicedb.admin import HierarchyNodeAdmin, HierarchyNodeRoleInline
 
         admin = HierarchyNodeAdmin(HierarchyNode, admin_site)
 
@@ -268,7 +268,7 @@ class TestAdminRegistration:
     @pytest.mark.django_db
     def test_hierarchy_node_search_fields(self, admin_site):
         """HierarchyNode admin has searchable fields."""
-        from django_rebac.admin import HierarchyNodeAdmin
+        from django_spicedb.admin import HierarchyNodeAdmin
 
         admin = HierarchyNodeAdmin(HierarchyNode, admin_site)
 
@@ -518,7 +518,7 @@ class TestComplexHierarchyScenario:
                 results=all_node_ids,
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             with tenant_context(company):
                 qs = HierarchyNode.objects.accessible_by(users["ceo"], "view")
@@ -555,7 +555,7 @@ class TestComplexHierarchyScenario:
                 results=[str(n.pk) for n in north_nodes],
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             with tenant_context(company):
                 qs = HierarchyNode.objects.accessible_by(users["regional_mgr_north"], "view")
@@ -592,7 +592,7 @@ class TestComplexHierarchyScenario:
                 results=[str(n.pk) for n in downtown_nodes],
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             with tenant_context(company):
                 qs = HierarchyNode.objects.accessible_by(users["branch_mgr_downtown"], "view")
@@ -628,7 +628,7 @@ class TestComplexHierarchyScenario:
                 results=[str(n.pk) for n in eng_nodes],
             )
 
-            from django_rebac.tenant import tenant_context
+            from django_spicedb.tenant import tenant_context
 
             with tenant_context(company):
                 qs = HierarchyNode.objects.accessible_by(users["dept_head_engineering"], "view")
@@ -710,7 +710,7 @@ class TestComplexHierarchyScenario:
                 name="Acme Region",
             )
 
-            from django_rebac.tenant import TenantAwarePermissionEvaluator
+            from django_spicedb.tenant import TenantAwarePermissionEvaluator
 
             # Try to access from other company context
             evaluator = TenantAwarePermissionEvaluator(users["ceo"], tenant=other_company)

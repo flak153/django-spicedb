@@ -34,7 +34,7 @@ Add to your `INSTALLED_APPS`:
 ```python
 INSTALLED_APPS = [
     # ...
-    'django_rebac',
+    'django_spicedb',
 ]
 ```
 
@@ -86,7 +86,7 @@ Let's start simple - a document with an owner:
 # documents/models.py
 from django.db import models
 from django.conf import settings
-from django_rebac.models import RebacModel
+from django_spicedb.models import RebacModel
 
 class Document(RebacModel):
     title = models.CharField(max_length=255)
@@ -359,7 +359,7 @@ Checking one object at a time works, but what about listing all documents a user
 ### Using RebacManager
 
 ```python
-from django_rebac.integrations.orm import RebacManager
+from django_spicedb.integrations.orm import RebacManager
 
 class Document(RebacModel):
     # ... fields ...
@@ -496,7 +496,7 @@ Now:
 For quick checks in views:
 
 ```python
-from django_rebac.runtime import can
+from django_spicedb.runtime import can
 
 def document_detail(request, pk):
     doc = get_object_or_404(Document, pk=pk)

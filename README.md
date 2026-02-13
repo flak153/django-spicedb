@@ -25,7 +25,7 @@ Add to `INSTALLED_APPS`:
 ```python
 INSTALLED_APPS = [
     # ...
-    'django_rebac',
+    'django_spicedb',
 ]
 ```
 
@@ -83,8 +83,8 @@ Now we express that mapping in Django models.
 
 ```python
 from django.db import models
-from django_rebac.models import RebacModel
-from django_rebac.integrations.orm import RebacManager
+from django_spicedb.models import RebacModel
+from django_spicedb.integrations.orm import RebacManager
 
 class Folder(RebacModel):
     name = models.CharField(max_length=255)
@@ -137,7 +137,7 @@ Now you can ask SpiceDB whether a user can access an object, or
 filter querysets by permission.
 
 ```python
-from django_rebac.runtime import can
+from django_spicedb.runtime import can
 
 if can(request.user, 'view', document):
     # User can view this document
@@ -153,8 +153,8 @@ For team/department-based permissions, use the Group pattern:
 
 ```python
 from django.db import models
-from django_rebac.models import RebacModel
-from django_rebac.integrations.orm import RebacManager
+from django_spicedb.models import RebacModel
+from django_spicedb.integrations.orm import RebacManager
 
 class Group(RebacModel):
     """A group with role-based membership."""
@@ -220,8 +220,8 @@ Then create signal handlers for `GroupMembership` to sync tuples:
 # signals.py
 from django.db import transaction
 from django.db.models.signals import post_save, post_delete
-from django_rebac.adapters import factory
-from django_rebac.adapters.base import TupleKey, TupleWrite
+from django_spicedb.adapters import factory
+from django_spicedb.adapters.base import TupleKey, TupleWrite
 
 def handle_membership_save(sender, instance, **kwargs):
     def do_sync():
@@ -328,7 +328,7 @@ python manage.py rebac_backfill
 
 ```python
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': ['django_rebac.drf.ReBACPermission'],
+    'DEFAULT_PERMISSION_CLASSES': ['django_spicedb.drf.ReBACPermission'],
 }
 ```
 

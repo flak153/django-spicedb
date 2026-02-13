@@ -297,8 +297,8 @@ Since role assignment failed in step 5, there are no roles to remove. This test 
 6. Test database query for roles independently
 
 **Suggested Fix Locations:**
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/views.py:619-646` (PartialNodeRolesView)
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/tenant.py` (TenantAwarePermissionEvaluator)
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/views.py:619-646` (PartialNodeRolesView)
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/tenant.py` (TenantAwarePermissionEvaluator)
 
 ---
 
@@ -323,8 +323,8 @@ Since role assignment failed in step 5, there are no roles to remove. This test 
 6. Verify database migrations are up to date
 
 **Suggested Fix Locations:**
-- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/views.py:239-288` (AssignRoleView)
-- Check signal handlers in `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/sync/registry.py`
+- `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/views.py:239-288` (AssignRoleView)
+- Check signal handlers in `/Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/sync/registry.py`
 
 **Likely Root Cause:**
 Based on code review, the most probable cause is:

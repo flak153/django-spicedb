@@ -195,7 +195,7 @@ Project.objects.accessible_by(request.user, "view")
 
 DRF
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["django_rebac.drf.ReBACPermission"]
+    "DEFAULT_PERMISSION_CLASSES": ["django_spicedb.drf.ReBACPermission"]
 }
 
 grant / revoke
@@ -298,7 +298,7 @@ richer caveats (geo, quotas, AB tests)
 
 deliverables summary
 
-django_rebac/ package with clear module boundaries:
+django_spicedb/ package with clear module boundaries:
 
 types/ (registry, compiler)
 

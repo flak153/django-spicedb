@@ -86,16 +86,16 @@ Total companies: 2
 **Technical Details:**
 ```
 Exception Type: ValueError
-Exception Location: /Users/mohammedali/PycharmProjects/Django-Spicedb/django_rebac/conf.py, line 148, in get_tenant_model
+Exception Location: /Users/mohammedali/PycharmProjects/Django-Spicedb/django_spicedb/conf.py, line 148, in get_tenant_model
 Exception Value: REBAC['tenant_model'] is not configured. Set it to your tenant model path, e.g., 'myapp.Company'.
 ```
 
 **Root Cause Analysis:**
-The `HierarchyTreeView` (django_rebac/views.py:113) uses `TenantMixin` which calls `get_tenant_model()` in its `dispatch()` method. This function requires `REBAC['tenant_model']` to be set in Django settings, but the example_project/settings.py file does not include this configuration.
+The `HierarchyTreeView` (django_spicedb/views.py:113) uses `TenantMixin` which calls `get_tenant_model()` in its `dispatch()` method. This function requires `REBAC['tenant_model']` to be set in Django settings, but the example_project/settings.py file does not include this configuration.
 
 **Code Location:**
 ```python
-# File: django_rebac/conf.py, line 144-151
+# File: django_spicedb/conf.py, line 144-151
 def get_tenant_model():
     config = _get_rebac_settings()
     tenant_model_path = config.get("tenant_model")
@@ -185,8 +185,8 @@ REBAC = {
 
 **Files Affected:**
 - `/example_project/settings.py` (needs update)
-- `/django_rebac/conf.py` (validation logic)
-- `/django_rebac/views.py` (all hierarchy views depend on this)
+- `/django_spicedb/conf.py` (validation logic)
+- `/django_spicedb/views.py` (all hierarchy views depend on this)
 
 **Related Code:**
 - `TenantMixin` class in views.py line 53-72
@@ -274,7 +274,7 @@ Due to the blocking configuration bug, none of the HTMX functionality could be t
 if request.headers.get("HX-Request"):
     roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
     # ... render partial template
-    return render(request, "django_rebac/partials/_node_roles.html", {...})
+    return render(request, "django_spicedb/partials/_node_roles.html", {...})
 ```
 - Proper HTMX detection
 - Returns partial template for dynamic updates

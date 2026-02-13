@@ -19,15 +19,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 
-import django_rebac.conf as conf
-from django_rebac.adapters import factory
-from django_rebac.adapters.base import TupleKey, TupleWrite
-from django_rebac.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
-from django_rebac.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
-from django_rebac.runtime import PermissionEvaluator
-from django_rebac.schema import publish_schema
-from django_rebac.sync import registry
-from django_rebac.tenant import TenantAwarePermissionEvaluator, tenant_context
+import django_spicedb.conf as conf
+from django_spicedb.adapters import factory
+from django_spicedb.adapters.base import TupleKey, TupleWrite
+from django_spicedb.hierarchy.signals import connect_hierarchy_signals, disconnect_hierarchy_signals
+from django_spicedb.models import HierarchyNode, HierarchyNodeRole, HierarchyTypeDefinition
+from django_spicedb.runtime import PermissionEvaluator
+from django_spicedb.schema import publish_schema
+from django_spicedb.sync import registry
+from django_spicedb.tenant import TenantAwarePermissionEvaluator, tenant_context
 
 from example_project.documents.models import Company
 
@@ -67,7 +67,7 @@ def _hierarchy_config():
             },
             # New hierarchy_node type
             "hierarchy_node": {
-                "model": "django_rebac.models.HierarchyNode",
+                "model": "django_spicedb.models.HierarchyNode",
                 "relations": {
                     "parent": "hierarchy_node",
                     "owner": "user",

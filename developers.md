@@ -32,14 +32,14 @@ The roadmap and design are captured in [`planning.md`](planning.md). This README
 ---
 
 ## Package layout
-- `django_rebac/types/` – TypeGraph registry, validation, schema compiler.
-- `django_rebac/adapters/` – SpiceDB adapter (gRPC, retries, circuit breaker) plus abstract interface for alternate backends.
-- `django_rebac/sync/` – TupleSync orchestrator, outbox worker, jobs/audit models.
-- `django_rebac/runtime/` – PermissionEvaluator, caching, context handling, explain/proof generation.
-- `django_rebac/integrations/` – ORM manager, DRF permission class, template tags.
-- `django_rebac/admin/` – Admin dashboard, Explorer, bulk grant tooling.
-- `django_rebac/observe/` – Metrics, structured logs, tracing helpers.
-- `django_rebac/management/commands/` – `publish_rebac_schema`, `rebac_backfill`, `rebac_repair`.
+- `django_spicedb/types/` – TypeGraph registry, validation, schema compiler.
+- `django_spicedb/adapters/` – SpiceDB adapter (gRPC, retries, circuit breaker) plus abstract interface for alternate backends.
+- `django_spicedb/sync/` – TupleSync orchestrator, outbox worker, jobs/audit models.
+- `django_spicedb/runtime/` – PermissionEvaluator, caching, context handling, explain/proof generation.
+- `django_spicedb/integrations/` – ORM manager, DRF permission class, template tags.
+- `django_spicedb/admin/` – Admin dashboard, Explorer, bulk grant tooling.
+- `django_spicedb/observe/` – Metrics, structured logs, tracing helpers.
+- `django_spicedb/management/commands/` – `publish_rebac_schema`, `rebac_backfill`, `rebac_repair`.
 - `example_project/` – Full Django project illustrating integration end-to-end.
 - `tests/` – Unit and integration suites (SpiceDB container fixture, fake adapter).
 
@@ -100,7 +100,7 @@ Shadow mode is the default: decisions are logged but not enforced until toggled 
 - **Lint / type check** (planned additions)  
   ```bash
   poetry run ruff check
-  poetry run mypy django_rebac
+  poetry run mypy django_spicedb
   ```
 - **Seed demo data**
   ```bash

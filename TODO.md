@@ -47,9 +47,9 @@
 
 **1.5 Migrations**
 - [x] Create migration for new models (`0004_add_hierarchy_models.py`)
-- [x] Run `makemigrations django_rebac`
+- [x] Run `makemigrations django_spicedb`
 
-**1.6 Admin Registration** (`django_rebac/admin.py`)
+**1.6 Admin Registration** (`django_spicedb/admin.py`)
 - [x] Register `HierarchyTypeDefinition` with list display, filters
 - [x] Register `HierarchyNode` with tree view (or at least parent filter)
 - [x] Register `HierarchyNodeRole` as inline on HierarchyNode
@@ -74,7 +74,7 @@ definition hierarchy_node {
 
 ### Phase 3: Tuple Sync for Hierarchy
 
-**3.1 Signal Handlers** (`django_rebac/hierarchy/signals.py`)
+**3.1 Signal Handlers** (`django_spicedb/hierarchy/signals.py`)
 - [x] `post_save` on `HierarchyNode`: write parent tuple
 - [x] `post_delete` on `HierarchyNode`: delete parent tuple
 - [x] `post_save` on `HierarchyNodeRole`: write role tuple (e.g., `hierarchy_node:123#manager@user:456`)
@@ -86,28 +86,28 @@ definition hierarchy_node {
 
 ### Phase 4: Tenant-Aware Evaluation
 
-**4.1 Tenant Context** (`django_rebac/tenant.py`)
+**4.1 Tenant Context** (`django_spicedb/tenant.py`)
 - [x] Thread-local `_current_tenant`
 - [x] `get_current_tenant()` / `set_current_tenant()` / `clear_current_tenant()`
 - [x] Context manager: `with tenant_context(tenant):`
 
-**4.2 Tenant Middleware** (new file: `django_rebac/tenant/middleware.py`)
+**4.2 Tenant Middleware** (new file: `django_spicedb/tenant/middleware.py`)
 - [ ] Resolve tenant from: subdomain, header (`X-Tenant-ID`), or user's default
 - [ ] Set `request.tenant` and thread-local
 - [ ] Clear on response
 
-**4.3 Tenant-Aware Evaluator** (`django_rebac/tenant.py`)
+**4.3 Tenant-Aware Evaluator** (`django_spicedb/tenant.py`)
 - [x] `TenantAwarePermissionEvaluator(subject, tenant=None)`
 - [x] Override `can()`: check `obj.tenant_id == self._tenant.id` BEFORE SpiceDB call
 - [x] Cross-tenant access = automatic deny (security critical)
 
-**4.4 Tenant-Aware QuerySet** (`django_rebac/integrations/orm.py`)
+**4.4 Tenant-Aware QuerySet** (`django_spicedb/integrations/orm.py`)
 - [x] `TenantAwareRebacQuerySet` with auto tenant filtering
 - [x] `accessible_by()` filters by tenant FIRST, then calls LookupResources
 
 ### Phase 5: Optimized Reverse Lookups
 
-**5.1 Hierarchy Lookup Helper** (`django_rebac/tenant.py`)
+**5.1 Hierarchy Lookup Helper** (`django_spicedb/tenant.py`)
 - [x] `TenantHierarchyLookup(user, tenant)`
 - [x] `get_accessible_hierarchy_nodes(permission)` - returns Set[int] of node IDs
 - [x] Cache per request (avoid repeated LookupResources calls)
@@ -181,7 +181,7 @@ definition hierarchy_node {
 - [ ] Observability hooks: structured events for writes/deletes/errors with counts and latency.
 
 ## Adapter & Runtime Polishing
-- [ ] Add tests covering `django_rebac.adapters.factory` (configuration, reset).
+- [ ] Add tests covering `django_spicedb.adapters.factory` (configuration, reset).
 - [ ] Enhance `PermissionEvaluator` to accept injected adapters, context merging, consistency options.
 - [ ] Batch-check API: `batch_can()` using SpiceDB bulk check (single RPC instead of N calls).
 - [ ] Watch-token-based cache invalidation (SpiceDB) and TTL fallback.

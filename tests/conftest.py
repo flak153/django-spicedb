@@ -7,9 +7,9 @@ from typing import Any, Mapping
 import grpc
 import pytest
 
-from django_rebac.adapters import reset_adapter, set_adapter
-from django_rebac.adapters.base import TupleKey, TupleWrite
-from django_rebac.adapters.spicedb import SpiceDBAdapter
+from django_spicedb.adapters import reset_adapter, set_adapter
+from django_spicedb.adapters.base import TupleKey, TupleWrite
+from django_spicedb.adapters.spicedb import SpiceDBAdapter
 
 SPICEDB_ENDPOINT = os.getenv("SPICEDB_ENDPOINT", "localhost:50051")
 SPICEDB_TOKEN = os.getenv("SPICEDB_PRESHARED_KEY", "devkey")

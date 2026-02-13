@@ -2,7 +2,7 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
 
-from django_rebac.adapters import factory
+from django_spicedb.adapters import factory
 from tests.conftest import RecordingAdapter
 
 

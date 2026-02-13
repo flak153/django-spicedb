@@ -2,9 +2,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from django_rebac.core import register_type
-from django_rebac.integrations.orm import RebacManager
-from django_rebac.models import RebacModel, Resource
+from django_spicedb.core import register_type
+from django_spicedb.integrations.orm import RebacManager
+from django_spicedb.models import RebacModel, Resource
 
 
 # Register Django's User model as a ReBAC type

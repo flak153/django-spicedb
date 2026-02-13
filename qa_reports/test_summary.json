@@ -34,11 +34,11 @@
         "impact": "Complete inability to access hierarchy UI",
         "affected_files": [
           "example_project/settings.py",
-          "django_rebac/conf.py",
-          "django_rebac/views.py"
+          "django_spicedb/conf.py",
+          "django_spicedb/views.py"
         ],
         "error_message": "REBAC['tenant_model'] is not configured. Set it to your tenant model path, e.g., 'myapp.Company'.",
-        "error_location": "django_rebac/conf.py:148",
+        "error_location": "django_spicedb/conf.py:148",
         "proposed_fix": "Add 'tenant_model': 'example_project.documents.models.Company' to REBAC settings",
         "blocks": [
           "All hierarchy UI functionality",
