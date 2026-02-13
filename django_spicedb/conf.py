@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, MutableMapping, Optional, Type
+from typing import Any, Mapping, MutableMapping, Type
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured

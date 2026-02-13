@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Tuple
 
 import django_spicedb.conf as conf
 

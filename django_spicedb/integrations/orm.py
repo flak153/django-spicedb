@@ -6,7 +6,6 @@ from typing import Any, Mapping
 
 from django.db import models
 
-import django_spicedb.conf as conf
 from django_spicedb.runtime.evaluator import PermissionEvaluator
 
 

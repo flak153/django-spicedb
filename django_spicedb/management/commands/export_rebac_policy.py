@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from django_spicedb.models import TypeDefinition
 import yaml
-import os
 
 class Command(BaseCommand):
     help = 'Export ReBAC policy from DB to YAML file'

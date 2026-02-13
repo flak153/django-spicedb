@@ -1,8 +1,8 @@
 """django-spicedb: Declarative relationship-based access control (ReBAC) for Django."""
 
-default_app_config = "django_spicedb.apps.DjangoSpicedbConfig"
+default_app_config = "django_spicedb.apps.DjangoSpicedbConfig"  # noqa: E402
 
-from .types.graph import TypeGraph
+from .types.graph import TypeGraph  # noqa: E402
 
 
 def __getattr__(name: str):
