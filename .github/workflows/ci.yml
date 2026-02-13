@@ -10,27 +10,47 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spicedb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Run SpiceDB migrations
+        run: |
+          docker run --rm --network host \
+            authzed/spicedb migrate head \
+            --datastore-engine postgres \
+            --datastore-conn-uri "postgres://postgres:postgres@localhost:5432/spicedb?sslmode=disable"
 
       - name: Start SpiceDB
         run: |
           docker run -d --name spicedb \
-            -p 50051:50051 \
+            --network host \
             authzed/spicedb serve \
             --grpc-preshared-key testkey \
-            --datastore-engine memory
+            --datastore-engine postgres \
+            --datastore-conn-uri "postgres://postgres:postgres@localhost:5432/spicedb?sslmode=disable"
 
       - name: Wait for SpiceDB
         run: |
           for i in $(seq 1 30); do
-            if grpc_health_probe -addr=localhost:50051 2>/dev/null; then
-              echo "SpiceDB is ready"
-              exit 0
-            fi
+            docker logs spicedb 2>&1 | grep -q "grpc server started serving" && break
             sleep 1
           done
-          echo "SpiceDB ready (timeout ok for memory engine)"
+          sleep 2
 
       - name: Set up Python
         uses: actions/setup-python@v5
