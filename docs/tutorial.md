@@ -417,12 +417,22 @@ class Team(RebacModel):
     class RebacMeta:
         type_name = 'team'
         relations = {
-            'member': {'subject': 'user'},   # Manual relation
-            'manager': {'subject': 'user'},  # Manual relation
+            'member': {'subject': 'user'},
+            'manager': {'subject': 'user'},
         }
         permissions = {
             'view': 'member + manager',
             'manage': 'manager',
+        }
+        through = {
+            'model': 'myapp.models.TeamMembership',
+            'object_fk': 'team',
+            'subject_fk': 'user',
+            'role_field': 'role',
+            'roles': {
+                'member': 'member',
+                'manager': 'manager',
+            },
         }
 
 
@@ -443,77 +453,13 @@ class TeamMembership(models.Model):
         unique_together = ('team', 'user')
 ```
 
-**Manual relations**: When you use `{'subject': 'user'}` instead of a field name, you're telling django-spicedb "I'll sync this myself." This is for cases like role-based membership where the relation depends on a field value (the role), not just the existence of a row.
+**Through bindings**: The `through` attribute on `RebacMeta` tells django-spicedb how to map a through-table with roles to SpiceDB relations. Each entry in `roles` maps a role field value to a relation name. django-spicedb automatically:
 
-### Syncing Memberships
+- Writes a tuple when a `TeamMembership` is created
+- Deletes the old tuple and writes a new one when the role, team, or user changes
+- Deletes the tuple when a `TeamMembership` is deleted
 
-Create signal handlers to sync memberships:
-
-```python
-# signals.py
-from django.db import transaction
-from django.db.models.signals import post_save, post_delete, pre_save
-from django.dispatch import receiver
-from django_rebac.adapters import factory
-from django_rebac.adapters.base import TupleKey, TupleWrite
-
-@receiver(pre_save, sender=TeamMembership)
-def track_old_role(sender, instance, **kwargs):
-    if instance.pk:
-        try:
-            old = TeamMembership.objects.get(pk=instance.pk)
-            instance._old_role = old.role
-            instance._old_team_id = old.team_id
-            instance._old_user_id = old.user_id
-        except TeamMembership.DoesNotExist:
-            pass
-
-@receiver(post_save, sender=TeamMembership)
-def sync_membership_save(sender, instance, created, **kwargs):
-    def do_sync():
-        adapter = factory.get_adapter()
-
-        # Delete old tuple if role/team/user changed
-        if not created and hasattr(instance, '_old_role'):
-            adapter.delete_tuples([TupleKey(
-                object=f'team:{instance._old_team_id}',
-                relation=instance._old_role,
-                subject=f'user:{instance._old_user_id}',
-            )])
-
-        # Write new tuple
-        adapter.write_tuples([TupleWrite(key=TupleKey(
-            object=f'team:{instance.team_id}',
-            relation=instance.role,
-            subject=f'user:{instance.user_id}',
-        ))])
-
-    transaction.on_commit(do_sync)
-
-@receiver(post_delete, sender=TeamMembership)
-def sync_membership_delete(sender, instance, **kwargs):
-    def do_delete():
-        factory.get_adapter().delete_tuples([TupleKey(
-            object=f'team:{instance.team_id}',
-            relation=instance.role,
-            subject=f'user:{instance.user_id}',
-        )])
-
-    transaction.on_commit(do_delete)
-```
-
-Register in your app config:
-
-```python
-# apps.py
-from django.apps import AppConfig
-
-class DocumentsConfig(AppConfig):
-    name = 'documents'
-
-    def ready(self):
-        import documents.signals  # noqa
-```
+No manual signal handlers or `apps.py` wiring needed.
 
 ### Using Teams with Folders
 

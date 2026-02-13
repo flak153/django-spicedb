@@ -173,13 +173,22 @@ class Group(RebacModel):
     class RebacMeta:
         type_name = "group"
         relations = {
-            # Manual relations - synced via GroupMembership signals
             "member": {"subject": "user"},
             "manager": {"subject": "user"},
         }
         permissions = {
             "view": "member + manager",
             "manage": "manager",
+        }
+        through = {
+            "model": "example_project.documents.models.GroupMembership",
+            "object_fk": "group",
+            "subject_fk": "user",
+            "role_field": "role",
+            "roles": {
+                "member": "member",
+                "manager": "manager",
+            },
         }
 
     def __str__(self) -> str:

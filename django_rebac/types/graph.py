@@ -121,6 +121,8 @@ class TypeGraph:
             result[k] = v
         return result
 
+    _THROUGH_REQUIRED_KEYS: Set[str] = frozenset({"model", "object_fk", "subject_fk"})
+
     def _extract_bindings(
         self, cfg: Mapping[str, object], key: str = "bindings"
     ) -> MutableMapping[str, MutableMapping[str, str]]:
@@ -137,31 +139,55 @@ class TypeGraph:
                 raise TypeGraphError(
                     f"{key!r}.{relation} must be a mapping with field/kind."
                 )
-            try:
-                field_name = binding["field"]
-                kind = binding["kind"]
-            except KeyError as exc:
+            kind = binding.get("kind", "")
+            if not isinstance(kind, str):
                 raise TypeGraphError(
-                    f"{key!r}.{relation} missing required key {exc.args[0]!r}"
-                ) from exc
-            if not isinstance(field_name, str) or not isinstance(kind, str):
-                raise TypeGraphError(
-                    f"{key!r}.{relation} field/kind must be strings."
+                    f"{key!r}.{relation} kind must be a string."
                 )
             lower_kind = kind.lower()
             if lower_kind not in self.ALLOWED_BINDING_KINDS:
                 raise TypeGraphError(
                     f"{key!r}.{relation} uses unsupported kind {kind!r}."
                 )
-            result[relation] = {
-                "field": field_name,
-                "kind": lower_kind,
-                **{
-                    attr: value
-                    for attr, value in binding.items()
-                    if attr not in {"field", "kind"}
-                },
-            }
+
+            if lower_kind == "through":
+                # Through bindings require model, object_fk, subject_fk
+                # instead of field
+                for req_key in self._THROUGH_REQUIRED_KEYS:
+                    if req_key not in binding or not binding[req_key]:
+                        raise TypeGraphError(
+                            f"{key!r}.{relation} through binding missing "
+                            f"required key {req_key!r}"
+                        )
+                result[relation] = {
+                    "kind": lower_kind,
+                    **{
+                        attr: value
+                        for attr, value in binding.items()
+                        if attr != "kind"
+                    },
+                }
+            else:
+                # FK/M2M/manual bindings require field
+                try:
+                    field_name = binding["field"]
+                except KeyError as exc:
+                    raise TypeGraphError(
+                        f"{key!r}.{relation} missing required key {exc.args[0]!r}"
+                    ) from exc
+                if not isinstance(field_name, str):
+                    raise TypeGraphError(
+                        f"{key!r}.{relation} field must be a string."
+                    )
+                result[relation] = {
+                    "field": field_name,
+                    "kind": lower_kind,
+                    **{
+                        attr: value
+                        for attr, value in binding.items()
+                        if attr not in {"field", "kind"}
+                    },
+                }
         return result
 
     @staticmethod

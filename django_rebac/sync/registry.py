@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, List, Tuple
 
@@ -19,6 +20,9 @@ from django_rebac.types.graph import TypeConfig
 # Instance attribute key for storing old FK values
 _FK_CACHE_KEY = "_rebac_old_fk_values"
 
+# Instance attribute key for storing old through-table values
+_THROUGH_CACHE_KEY = "_rebac_old_through_values"
+
 
 @dataclass
 class _RegisteredSignal:
@@ -29,7 +33,16 @@ class _RegisteredSignal:
     m2m_handlers: List[Tuple[type[Model], Callable[..., None]]]
 
 
+@dataclass
+class _RegisteredThroughSignal:
+    model: type[Model]
+    pre_save_handler: Callable[..., None]
+    save_handler: Callable[..., None]
+    delete_handler: Callable[..., None]
+
+
 _REGISTERED: Dict[type[Model], _RegisteredSignal] = {}
+_THROUGH_REGISTERED: Dict[type[Model], _RegisteredThroughSignal] = {}
 
 
 def refresh() -> None:
@@ -44,6 +57,8 @@ def refresh() -> None:
         model = import_string(type_cfg.model)
         _register_model(type_cfg.name, model, type_cfg)
 
+    _register_through_bindings(graph)
+
 
 def _disconnect_all() -> None:
     for registered in list(_REGISTERED.values()):
@@ -53,6 +68,12 @@ def _disconnect_all() -> None:
         for sender, handler in registered.m2m_handlers:
             m2m_changed.disconnect(handler, sender=sender)
     _REGISTERED.clear()
+
+    for registered in list(_THROUGH_REGISTERED.values()):
+        pre_save.disconnect(registered.pre_save_handler, sender=registered.model)
+        post_save.disconnect(registered.save_handler, sender=registered.model)
+        post_delete.disconnect(registered.delete_handler, sender=registered.model)
+    _THROUGH_REGISTERED.clear()
 
 
 def _register_model(type_name: str, model: type[Model], cfg: TypeConfig) -> None:
@@ -373,3 +394,200 @@ def _get_fk_value(instance: Model, field_name: str, attribute: str) -> object | 
     if related is None:
         return None
     return getattr(related, attribute, None)
+
+
+# ------------------------------------------------------------------ through-table support
+
+
+def _register_through_bindings(graph) -> None:
+    """Scan all type configs for through bindings and register signal handlers.
+
+    Multiple relations on the same type may share a through model (e.g.
+    member/manager both use GroupMembership). We aggregate them into a single
+    set of handlers per through model to avoid duplicate signals.
+    """
+    # Aggregate: through_model_path -> {role_value: [(type_name, relation_name, subject_type)]}
+    aggregated: Dict[str, Dict[str, str]] = defaultdict(dict)
+    # Track per-model metadata (object_fk, subject_fk, role_field)
+    model_meta: Dict[str, Dict[str, str]] = {}
+
+    for type_name, type_cfg in graph.types.items():
+        for relation_name, binding_config in type_cfg.bindings.items():
+            if binding_config.get("kind") != "through":
+                continue
+
+            through_model_path = binding_config.get("model", "")
+            if not through_model_path:
+                continue
+
+            object_fk = binding_config.get("object_fk", "")
+            subject_fk = binding_config.get("subject_fk", "")
+            role_field = binding_config.get("role_field", "")
+            role_value = binding_config.get("role_value", "")
+
+            relation_target = type_cfg.relations.get(relation_name, "")
+            subject_type, subject_relation = _parse_subject(relation_target)
+
+            # Store role_value -> (type_name, relation_name, subject_type, subject_relation)
+            aggregated[through_model_path][role_value] = (
+                type_name, relation_name, subject_type, subject_relation
+            )
+
+            if through_model_path not in model_meta:
+                model_meta[through_model_path] = {
+                    "object_fk": object_fk,
+                    "subject_fk": subject_fk,
+                    "role_field": role_field,
+                }
+
+    for through_model_path, role_mapping in aggregated.items():
+        meta = model_meta[through_model_path]
+        through_model = import_string(through_model_path)
+
+        handlers = _make_through_handlers(
+            through_model=through_model,
+            object_fk=meta["object_fk"],
+            subject_fk=meta["subject_fk"],
+            role_field=meta["role_field"],
+            role_mapping=role_mapping,
+        )
+
+        pre_save_handler, post_save_handler, post_delete_handler = handlers
+
+        uid_prefix = f"rebac_through_{through_model_path}"
+        pre_save.connect(
+            pre_save_handler, sender=through_model, weak=False,
+            dispatch_uid=f"{uid_prefix}_pre_save",
+        )
+        post_save.connect(
+            post_save_handler, sender=through_model, weak=False,
+            dispatch_uid=f"{uid_prefix}_post_save",
+        )
+        post_delete.connect(
+            post_delete_handler, sender=through_model, weak=False,
+            dispatch_uid=f"{uid_prefix}_post_delete",
+        )
+
+        _THROUGH_REGISTERED[through_model] = _RegisteredThroughSignal(
+            model=through_model,
+            pre_save_handler=pre_save_handler,
+            save_handler=post_save_handler,
+            delete_handler=post_delete_handler,
+        )
+
+
+def _make_through_handlers(
+    through_model: type[Model],
+    object_fk: str,
+    subject_fk: str,
+    role_field: str,
+    role_mapping: Dict[str, tuple],
+) -> Tuple[Callable, Callable, Callable]:
+    """Create pre_save, post_save, post_delete handlers for a through model.
+
+    role_mapping: {role_value: (type_name, relation_name, subject_type, subject_relation)}
+    """
+
+    object_fk_id = f"{object_fk}_id"
+    subject_fk_id = f"{subject_fk}_id"
+
+    def _build_tuple_key(obj_id, subj_id, role_value):
+        """Build a TupleKey from the through-table row values."""
+        entry = role_mapping.get(role_value)
+        if entry is None:
+            return None
+        type_name, relation_name, subject_type, subject_relation = entry
+        return TupleKey(
+            object=f"{type_name}:{obj_id}",
+            relation=relation_name,
+            subject=_format_subject(subject_type, subj_id, subject_relation),
+        )
+
+    def handle_pre_save(sender, instance, **kwargs):  # pragma: no cover
+        """Track old values before save to detect changes."""
+        if not instance.pk:
+            return
+
+        try:
+            old = through_model.objects.only(
+                object_fk_id, subject_fk_id, role_field,
+            ).get(pk=instance.pk)
+            setattr(instance, _THROUGH_CACHE_KEY, {
+                "object_id": getattr(old, object_fk_id),
+                "subject_id": getattr(old, subject_fk_id),
+                "role": getattr(old, role_field),
+            })
+        except through_model.DoesNotExist:
+            pass
+
+    def handle_post_save(sender, instance, created, **kwargs):  # pragma: no cover
+        """Write new tuple, delete old if changed."""
+        old_values = getattr(instance, _THROUGH_CACHE_KEY, None)
+        if hasattr(instance, _THROUGH_CACHE_KEY):
+            delattr(instance, _THROUGH_CACHE_KEY)
+
+        new_obj_id = getattr(instance, object_fk_id)
+        new_subj_id = getattr(instance, subject_fk_id)
+        new_role = getattr(instance, role_field)
+
+        if new_obj_id is None or new_subj_id is None:
+            return
+
+        writes: list[TupleWrite] = []
+        deletes: list[TupleKey] = []
+
+        if old_values:
+            old_obj_id = old_values["object_id"]
+            old_subj_id = old_values["subject_id"]
+            old_role = old_values["role"]
+
+            changed = (
+                old_obj_id != new_obj_id
+                or old_subj_id != new_subj_id
+                or old_role != new_role
+            )
+
+            if not changed:
+                return  # No-op save
+
+            # Delete old tuple
+            old_key = _build_tuple_key(old_obj_id, old_subj_id, old_role)
+            if old_key:
+                deletes.append(old_key)
+
+        # Write new tuple
+        new_key = _build_tuple_key(new_obj_id, new_subj_id, new_role)
+        if new_key:
+            writes.append(TupleWrite(key=new_key))
+
+        if not writes and not deletes:
+            return
+
+        def do_sync():
+            adapter = factory.get_adapter()
+            if deletes:
+                adapter.delete_tuples(deletes)
+            if writes:
+                adapter.write_tuples(writes)
+
+        transaction.on_commit(do_sync)
+
+    def handle_post_delete(sender, instance, **kwargs):  # pragma: no cover
+        """Delete tuple on row deletion."""
+        obj_id = getattr(instance, object_fk_id, None)
+        subj_id = getattr(instance, subject_fk_id, None)
+        role = getattr(instance, role_field, None)
+
+        if obj_id is None or subj_id is None:
+            return
+
+        key = _build_tuple_key(obj_id, subj_id, role)
+        if not key:
+            return
+
+        def do_delete():
+            factory.get_adapter().delete_tuples([key])
+
+        transaction.on_commit(do_delete)
+
+    return handle_pre_save, handle_post_save, handle_post_delete

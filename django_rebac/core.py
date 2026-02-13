@@ -232,6 +232,27 @@ def build_type_configs_from_registry() -> MutableMapping[str, Any]:
             if parents:
                 config['parents'] = list(parents)
 
+            # Parse through-table bindings
+            through_config = getattr(rebac_meta, 'through', None)
+            if through_config and isinstance(through_config, dict):
+                through_model = through_config.get('model', '')
+                object_fk = through_config.get('object_fk', '')
+                subject_fk = through_config.get('subject_fk', '')
+                role_field = through_config.get('role_field', '')
+                roles = through_config.get('roles', {})
+
+                # Generate a binding entry for each role mapping
+                for role_value, relation_name in roles.items():
+                    if relation_name in config['relations']:
+                        config['bindings'][relation_name] = {
+                            'kind': 'through',
+                            'model': through_model,
+                            'object_fk': object_fk,
+                            'subject_fk': subject_fk,
+                            'role_field': role_field,
+                            'role_value': role_value,
+                        }
+
         configs[type_name] = config
 
     return configs
