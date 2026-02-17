@@ -24,6 +24,9 @@ poetry run python manage.py publish_rebac_schema
 # Backfill tuples from Django models to SpiceDB
 poetry run python manage.py rebac_backfill
 
+# Re-write expected tuples to SpiceDB (idempotent)
+poetry run python manage.py rebac_reconcile --fix
+
 # Run tests (auto-starts SpiceDB via Docker Compose)
 poetry run pytest
 
@@ -33,9 +36,8 @@ poetry run pytest tests/test_type_graph.py
 # Run a specific test
 poetry run pytest tests/test_type_graph.py::test_function_name -v
 
-# Lint and type check
+# Lint
 poetry run ruff check
-poetry run mypy django_spicedb
 ```
 
 ## Architecture
@@ -65,6 +67,7 @@ poetry run mypy django_spicedb
 
 - **integrations/** - Django/DRF integration points
   - `orm.py` - `RebacManager` and `RebacQuerySet` with `.accessible_by(user, relation)` method
+  - `drf.py` - `ReBACPermission` and `ReBACFilterBackend` (requires DRF extra)
 
 - **conf.py** - Settings loader for `settings.REBAC`
 
@@ -72,7 +75,7 @@ poetry run mypy django_spicedb
 
 ### Key Concepts
 
-1. **Types** map to Django models; defined in `settings.REBAC['types']`
+1. **Types** map to Django models via `RebacModel` + `RebacMeta`, with optional third-party model registration via `register_type()` or `settings.REBAC['external_types']`
 2. **Relations** are named edges (FK/M2M bindings) from objects to subjects
 3. **Permissions** are SpiceDB rewrite expressions composing relations (e.g., `view = owner | member | parent->view`)
 4. **Bindings** declare how model fields map to relations (kind: `fk`, `m2m`, `through`, `manual`)
@@ -82,17 +85,15 @@ poetry run mypy django_spicedb
 
 ```python
 REBAC = {
-    "types": {
-        "user": {"model": "django.contrib.auth.models.User"},
-        "document": {
-            "model": "myapp.models.Document",
-            "relations": {"owner": "user", "parent": "folder"},
-            "permissions": {"view": "owner + parent->view"},
-            "bindings": {
-                "owner": {"field": "owner", "kind": "fk"},
-                "parent": {"field": "folder", "kind": "fk"},
-            },
-        },
+    # Optional registration for models you don't own
+    "external_types": {
+        "user": "django.contrib.auth.models.User",
+        # Or explicit relation/permission config:
+        # "company": {
+        #     "model": "myapp.models.Company",
+        #     "relations": {"owner": "user"},
+        #     "permissions": {"view": "owner"},
+        # },
     },
     "adapter": {
         "endpoint": "localhost:50051",

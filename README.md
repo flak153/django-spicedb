@@ -320,6 +320,13 @@ python manage.py publish_rebac_schema
 
 # Backfill tuples from existing Django data
 python manage.py rebac_backfill
+
+# Reconcile tuples (re-writes all expected tuples, idempotent)
+python manage.py rebac_reconcile --fix
+
+# Export policy to YAML (requires pyyaml)
+pip install django-spicedb[yaml]
+python manage.py export_rebac_policy
 ```
 
 ---

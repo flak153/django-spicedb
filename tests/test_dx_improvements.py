@@ -213,6 +213,59 @@ class TestDuplicateTypeNameWarning:
 
 
 # ============================================================
+# Feature 4b: register_type decorator mode
+# ============================================================
+
+
+class TestRegisterTypeDecoratorMode:
+    """register_type() should work as a decorator when model_class is omitted."""
+
+    def test_decorator_mode_registers_model(self):
+        from django.db import models as _m
+
+        from django_spicedb.core import register_type, _REBAC_MODEL_REGISTRY
+
+        @register_type(type_name="decorated_test_model")
+        class DecoratedModel(_m.Model):
+            class Meta:
+                app_label = "tests"
+
+        assert "decorated_test_model" in _REBAC_MODEL_REGISTRY
+        assert _REBAC_MODEL_REGISTRY["decorated_test_model"] is DecoratedModel
+
+        # Cleanup
+        _REBAC_MODEL_REGISTRY.pop("decorated_test_model", None)
+
+    def test_decorator_mode_with_relations_and_permissions(self):
+        from django.db import models as _m
+
+        from django_spicedb.core import register_type, _REBAC_MODEL_REGISTRY
+
+        @register_type(
+            type_name="decorated_test_model2",
+            relations={"owner": {"subject": "user"}},
+            permissions={"view": "owner"},
+        )
+        class DecoratedModel2(_m.Model):
+            class Meta:
+                app_label = "tests"
+
+        assert "decorated_test_model2" in _REBAC_MODEL_REGISTRY
+        assert DecoratedModel2.RebacMeta.relations == {"owner": {"subject": "user"}}
+        assert DecoratedModel2.RebacMeta.permissions == {"view": "owner"}
+
+        # Cleanup
+        _REBAC_MODEL_REGISTRY.pop("decorated_test_model2", None)
+
+    def test_direct_call_still_works(self):
+        from django_spicedb.core import register_type, _REBAC_MODEL_REGISTRY
+
+        result = register_type(User, type_name="user")
+        assert result is User
+        assert "user" in _REBAC_MODEL_REGISTRY
+
+
+# ============================================================
 # Feature 5: System check for unregistered relation targets
 # ============================================================
 

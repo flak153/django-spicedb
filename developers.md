@@ -104,7 +104,7 @@ Shadow mode is the default: decisions are logged but not enforced until toggled 
   ```
 - **Seed demo data**
   ```bash
-  poetry run python manage.py rebac_seed_demo
+  poetry run python manage.py setup_demo
   ```
 
 ---

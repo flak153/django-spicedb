@@ -6,18 +6,26 @@ from django_spicedb.sync.reconcile import reconcile_tuples
 
 
 class Command(BaseCommand):
-    help = "Reconcile ReBAC tuples between Django and SpiceDB"
+    help = (
+        "Reconcile ReBAC tuples between Django and SpiceDB. "
+        "Note: without a read_tuples() adapter method, --fix re-writes all "
+        "expected tuples (idempotent) rather than computing a true diff."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--fix",
             action="store_true",
-            help="Apply fixes by writing tuples to SpiceDB",
+            help=(
+                "Re-write all expected tuples to SpiceDB (idempotent). "
+                "This ensures SpiceDB matches Django state but does not "
+                "detect or remove stale tuples."
+            ),
         )
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Report what would be done without making changes",
+            help="Report expected tuple counts without making changes",
         )
         parser.add_argument(
             "--type",
@@ -41,7 +49,7 @@ class Command(BaseCommand):
         # Set mode message
         if fix:
             mode = self.style.WARNING("FIX MODE")
-            self.stdout.write(f"\n{mode}: Tuples will be written to SpiceDB")
+            self.stdout.write(f"\n{mode}: All expected tuples will be re-written to SpiceDB (idempotent)")
         elif dry_run:
             mode = self.style.NOTICE("DRY RUN MODE")
             self.stdout.write(f"\n{mode}: No changes will be made")
@@ -133,8 +141,8 @@ class Command(BaseCommand):
             )
         elif total_to_write > 0:
             msg = (
-                f"Found {total_to_write} tuples to write. "
-                "Run with --fix to write them."
+                f"Found {total_to_write} expected tuples. "
+                "Run with --fix to re-write them to SpiceDB (idempotent)."
             )
             self.stdout.write(self.style.WARNING(msg))
         else:

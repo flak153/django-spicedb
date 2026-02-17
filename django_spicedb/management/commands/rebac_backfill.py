@@ -1,6 +1,7 @@
 """Management command to backfill SpiceDB tuples from existing Django data."""
 
-from django.core.management.base import BaseCommand
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -39,7 +40,15 @@ class Command(BaseCommand):
 
         type_names = filter_types if filter_types else list(graph.types.keys())
 
-        adapter = None if dry_run else get_adapter()
+        adapter = None
+        if not dry_run:
+            try:
+                adapter = get_adapter()
+            except ImproperlyConfigured as exc:
+                raise CommandError(
+                    f"SpiceDB adapter is not configured: {exc}\n"
+                    "Set REBAC['adapter'] in settings with 'endpoint' and 'token'."
+                ) from exc
 
         grand_total = 0
 
@@ -75,7 +84,13 @@ class Command(BaseCommand):
             if dry_run:
                 self.stdout.write(f"  {type_name}: {count} tuples")
             else:
-                written = backfill_tuples(adapter, tuples, batch_size=batch_size)
+                try:
+                    written = backfill_tuples(adapter, tuples, batch_size=batch_size)
+                except Exception as exc:
+                    raise CommandError(
+                        f"Failed writing tuples for type {type_name!r}: {exc}\n"
+                        "Check that SpiceDB is running and the endpoint/token are correct."
+                    ) from exc
                 self.stdout.write(f"  {type_name}: {written} tuples written")
 
         if dry_run:

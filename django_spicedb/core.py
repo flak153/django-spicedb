@@ -4,15 +4,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import (
-    Any,
-    Dict,
-    Mapping,
-    MutableMapping,
-    Optional,
-    TYPE_CHECKING,
-    Type,
-)
+from typing import Any, Dict, Mapping, MutableMapping, Optional, TYPE_CHECKING, Type
 
 __all__ = [
     "register_type",
@@ -92,11 +84,12 @@ def register_rebac_model(model_class: Type["django_models.Model"]) -> None:
 
 
 def register_type(
-    model_class: Type["django_models.Model"],
+    model_class: Optional[Type["django_models.Model"]] = None,
+    *,
     type_name: Optional[str] = None,
-    relations: Optional[Mapping[str, str]] = None,
+    relations: Optional[Mapping[str, Any]] = None,
     permissions: Optional[Mapping[str, str]] = None,
-) -> Type["django_models.Model"]:
+) -> Type["django_models.Model"] | Any:
     """
     Register a third-party model as a ReBAC type.
 
@@ -105,15 +98,33 @@ def register_type(
         from django.contrib.auth.models import User
         register_type(User, type_name="user")
 
+    It also supports decorator usage::
+
+        @register_type(type_name="user")
+        class CustomUser(AbstractUser):
+            ...
+
     Args:
-        model_class: The Django model class to register
+        model_class: The Django model class to register. If omitted, returns
+            a decorator that accepts the model class.
         type_name: SpiceDB type name (defaults to snake_case of class name)
         relations: Optional dict of relation_name → field_name
         permissions: Optional dict of permission_name → expression
 
     Returns:
-        The model class
+        The registered model class
     """
+    if model_class is None:
+        def _decorator(cls: Type["django_models.Model"]) -> Type["django_models.Model"]:
+            return register_type(
+                cls,
+                type_name=type_name,
+                relations=relations,
+                permissions=permissions,
+            )
+
+        return _decorator
+
     # Create a synthetic RebacMeta if needed
     if not hasattr(model_class, 'RebacMeta'):
         class RebacMeta:
