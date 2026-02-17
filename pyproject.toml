@@ -30,6 +30,10 @@ dependencies = [
     "grpcio (>=1.75.1,<2.0.0)",
 ]
 
+[project.optional-dependencies]
+drf = ["djangorestframework>=3.14"]
+yaml = ["pyyaml>=6.0"]
+
 [project.urls]
 Homepage = "https://github.com/flak153/django-spicedb"
 Documentation = "https://github.com/flak153/django-spicedb#readme"

@@ -45,6 +45,13 @@ from django_spicedb.tenant import TenantAwarePermissionEvaluator, tenant_context
 User = get_user_model()
 
 
+def _staff_bypass_enabled() -> bool:
+    """Check if staff/superuser permission bypass is enabled."""
+    from django_spicedb.conf import get_rebac_settings
+    config = get_rebac_settings()
+    return config.get("staff_bypass_permissions", True)
+
+
 # =============================================================================
 # Mixins
 # =============================================================================
@@ -80,7 +87,7 @@ class PermissionRequiredMixin:
     def check_permission(self, request: HttpRequest, node: HierarchyNode) -> bool:
         """Check if user has required permission on node."""
         # Superusers and staff bypass permission checks
-        if request.user.is_superuser or request.user.is_staff:
+        if _staff_bypass_enabled() and (request.user.is_superuser or request.user.is_staff):
             return True
         with tenant_context(self.tenant):  # type: ignore[attr-defined]
             evaluator = TenantAwarePermissionEvaluator(
@@ -124,7 +131,7 @@ class HierarchyTreeView(TenantPermissionMixin, TemplateView):
 
         # Get accessible nodes for the current user
         # Superusers and staff bypass permission filtering
-        if self.request.user.is_superuser or self.request.user.is_staff:
+        if _staff_bypass_enabled() and (self.request.user.is_superuser or self.request.user.is_staff):
             accessible_nodes = self.get_tenant_nodes().select_related(
                 "hierarchy_type", "parent"
             )
@@ -222,7 +229,7 @@ class NodeDetailView(TenantPermissionMixin, TemplateView):
 
         # Check if user can manage (for showing edit controls)
         # Superusers and staff can manage all nodes
-        if self.request.user.is_superuser or self.request.user.is_staff:
+        if _staff_bypass_enabled() and (self.request.user.is_superuser or self.request.user.is_staff):
             context["can_manage"] = True
         else:
             with tenant_context(self.tenant):
@@ -270,7 +277,7 @@ class AssignRoleView(TenantPermissionMixin, View):
         # For HTMX requests, return the updated roles partial
         if request.headers.get("HX-Request"):
             roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
-            if request.user.is_superuser or request.user.is_staff:
+            if _staff_bypass_enabled() and (request.user.is_superuser or request.user.is_staff):
                 can_manage = True
             else:
                 with tenant_context(self.tenant):
@@ -310,7 +317,7 @@ class RemoveRoleView(TenantPermissionMixin, View):
         # For HTMX requests, return the updated roles partial
         if request.headers.get("HX-Request"):
             roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
-            if request.user.is_superuser or request.user.is_staff:
+            if _staff_bypass_enabled() and (request.user.is_superuser or request.user.is_staff):
                 can_manage = True
             else:
                 with tenant_context(self.tenant):
@@ -630,7 +637,7 @@ class PartialNodeRolesView(TenantPermissionMixin, View):
         else:
             roles = list(HierarchyNodeRole.objects.filter(node=node).select_related("user"))
             # Superusers and staff can manage all nodes
-            if request.user.is_superuser or request.user.is_staff:
+            if _staff_bypass_enabled() and (request.user.is_superuser or request.user.is_staff):
                 can_manage = True
             else:
                 with tenant_context(self.tenant):

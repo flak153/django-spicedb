@@ -23,7 +23,4 @@ class DjangoSpicedbConfig(AppConfig):
 
         reset_type_graph_cache()
 
-        try:
-            registry.refresh()
-        except Exception:
-            logger.exception("Failed to initialize ReBAC signal registry")
+        registry.refresh()

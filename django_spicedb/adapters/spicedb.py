@@ -27,13 +27,24 @@ class SpiceDBAdapter(RebacAdapter):
         insecure: bool = True,
         grpc_options: Sequence[tuple[str, str]] = (),
     ) -> None:
+        _DEFAULT_GRPC_OPTIONS = [
+            ("grpc.keepalive_time_ms", 30000),
+            ("grpc.keepalive_timeout_ms", 10000),
+            ("grpc.keepalive_permit_without_calls", 1),
+        ]
+
+        if grpc_options:
+            effective_options = grpc_options
+        else:
+            effective_options = _DEFAULT_GRPC_OPTIONS
+
         if insecure:
-            self._channel = grpc.insecure_channel(endpoint, options=grpc_options)
+            self._channel = grpc.insecure_channel(endpoint, options=effective_options)
         else:
             self._channel = grpc.secure_channel(
                 endpoint,
                 grpc.ssl_channel_credentials(),
-                options=grpc_options,
+                options=effective_options,
             )
 
         self._metadata = (("authorization", f"Bearer {token}"),)
@@ -62,29 +73,19 @@ class SpiceDBAdapter(RebacAdapter):
         )
 
     def delete_tuples(self, tuples: Sequence[TupleKey]) -> None:
-        for key in tuples:
-            resource_type, resource_id = _parse_object(key.object)
-            subject_type, subject_id, subject_relation = _parse_subject(key.subject)
-
-            subject_filter = perm_pb.SubjectFilter(
-                subject_type=subject_type,
-                optional_subject_id=subject_id,
+        updates = [
+            self._build_update(
+                TupleWrite(key=key),
+                core_pb.RelationshipUpdate.Operation.OPERATION_DELETE,
             )
-            if subject_relation:
-                subject_filter.optional_relation.relation = subject_relation
-
-            request = perm_pb.DeleteRelationshipsRequest(
-                relationship_filter=perm_pb.RelationshipFilter(
-                    resource_type=resource_type,
-                    optional_resource_id=resource_id,
-                    optional_relation=key.relation,
-                    optional_subject_filter=subject_filter,
-                )
-            )
-            self._permission_client.DeleteRelationships(
-                request,
-                metadata=self._metadata,
-            )
+            for key in tuples
+        ]
+        if not updates:
+            return
+        self._permission_client.WriteRelationships(
+            perm_pb.WriteRelationshipsRequest(updates=updates),
+            metadata=self._metadata,
+        )
 
     # -------------------------------------------------------------- permission
     def check(
@@ -126,6 +127,7 @@ class SpiceDBAdapter(RebacAdapter):
         *,
         context: dict | None = None,
         consistency: str | None = None,
+        max_results: int | None = None,
     ) -> Iterable[str]:
         """Find all resources a subject has permission on.
 
@@ -137,6 +139,8 @@ class SpiceDBAdapter(RebacAdapter):
             permission=relation,
             subject=_build_subject(subject),
         )
+        if max_results is not None:
+            request.optional_limit = max_results
         if context:
             request.context = perm_pb.Context()
             request.context.fields.update(context)
@@ -149,6 +153,24 @@ class SpiceDBAdapter(RebacAdapter):
         )
         for item in stream:
             yield item.resource_object_id
+
+    def batch_check(
+        self,
+        subject: str,
+        relation: str,
+        objects: Sequence[str],
+        *,
+        context: dict | None = None,
+        consistency: str | None = None,
+    ) -> list[bool]:
+        """Check permissions for multiple objects.
+
+        Uses sequential checks as a baseline implementation.
+        """
+        return [
+            self.check(subject, relation, obj, context=context, consistency=consistency)
+            for obj in objects
+        ]
 
     def lookup_subjects(
         self,

@@ -2,12 +2,12 @@
 
 import logging
 
-from django.core.checks import Error, register, Tags
+from django.core.checks import Error, register
 
 logger = logging.getLogger(__name__)
 
 
-@register(Tags.models)
+@register("rebac")
 def check_rebac_configuration(app_configs, **kwargs):
     """Validate ReBAC model configurations."""
     errors = []

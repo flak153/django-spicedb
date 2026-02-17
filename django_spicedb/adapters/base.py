@@ -42,6 +42,24 @@ class RebacAdapter(Protocol):
     ) -> bool:
         ...
 
+    def batch_check(
+        self,
+        subject: str,
+        relation: str,
+        objects: Sequence[str],
+        *,
+        context: Mapping[str, Any] | None = None,
+        consistency: str | None = None,
+    ) -> list[bool]:
+        """Check permissions for multiple objects in a single call.
+
+        Default implementation falls back to sequential checks.
+        """
+        return [
+            self.check(subject, relation, obj, context=context, consistency=consistency)
+            for obj in objects
+        ]
+
     def lookup_resources(
         self,
         subject: str,
@@ -50,5 +68,6 @@ class RebacAdapter(Protocol):
         *,
         context: Mapping[str, Any] | None = None,
         consistency: str | None = None,
+        max_results: int | None = None,
     ) -> Iterable[str]:
         ...

@@ -39,7 +39,7 @@ The roadmap and design are captured in [`planning.md`](planning.md). This README
 - `django_spicedb/integrations/` – ORM manager, DRF permission class, template tags.
 - `django_spicedb/admin/` – Admin dashboard, Explorer, bulk grant tooling.
 - `django_spicedb/observe/` – Metrics, structured logs, tracing helpers.
-- `django_spicedb/management/commands/` – `publish_rebac_schema`, `rebac_backfill`, `rebac_repair`.
+- `django_spicedb/management/commands/` – `publish_rebac_schema`, `rebac_backfill`, `rebac_reconcile`.
 - `example_project/` – Full Django project illustrating integration end-to-end.
 - `tests/` – Unit and integration suites (SpiceDB container fixture, fake adapter).
 

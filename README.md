@@ -326,10 +326,43 @@ python manage.py rebac_backfill
 
 ## DRF Integration
 
+Requires `djangorestframework`:
+
+```bash
+pip install django-spicedb[drf]
+```
+
+### Object-Level Permissions
+
 ```python
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': ['django_spicedb.drf.ReBACPermission'],
-}
+from rest_framework.viewsets import ModelViewSet
+from django_spicedb.drf import ReBACPermission
+
+class DocumentViewSet(ModelViewSet):
+    queryset = Document.objects.all()
+    permission_classes = [ReBACPermission]
+
+    # Single permission for all actions:
+    rebac_permission = "view"
+
+    # Or per-action:
+    rebac_action_permissions = {
+        "list": "view",
+        "retrieve": "view",
+        "update": "edit",
+        "destroy": "delete",
+    }
+```
+
+### Queryset Filtering
+
+```python
+from django_spicedb.drf import ReBACFilterBackend
+
+class DocumentViewSet(ModelViewSet):
+    queryset = Document.objects.all()
+    filter_backends = [ReBACFilterBackend]
+    rebac_filter_permission = "view"  # defaults to "view"
 ```
 
 ---

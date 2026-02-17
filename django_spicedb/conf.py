@@ -36,7 +36,39 @@ def get_type_graph() -> TypeGraph:
     if _TYPE_GRAPH_CACHE is not None:
         return _TYPE_GRAPH_CACHE
 
-    from .core import build_type_configs_from_registry
+    from .core import build_type_configs_from_registry, register_type
+
+    # Process external_types from settings before building configs
+    rebac_settings = get_rebac_settings()
+    external_types = rebac_settings.get("external_types", {})
+    for ext_type_name, ext_spec in external_types.items():
+        if isinstance(ext_spec, str):
+            # String shorthand: "company": "myapp.models.Company"
+            model_class = import_string(ext_spec)
+            register_type(model_class, type_name=ext_type_name)
+        elif isinstance(ext_spec, dict):
+            # Dict with details: "company": {"model": "...", "relations": {...}, ...}
+            model_path = ext_spec.get("model", "")
+            if not model_path:
+                continue
+            model_class = import_string(model_path)
+            # Convert relations from {"owner": "user"} to {"owner": {"subject": "user"}}
+            # so build_type_configs_from_registry treats them as manual (not field-based)
+            raw_relations = ext_spec.get("relations")
+            converted_relations = None
+            if raw_relations:
+                converted_relations = {}
+                for rel_name, rel_value in raw_relations.items():
+                    if isinstance(rel_value, str):
+                        converted_relations[rel_name] = {"subject": rel_value}
+                    else:
+                        converted_relations[rel_name] = rel_value
+            register_type(
+                model_class,
+                type_name=ext_type_name,
+                relations=converted_relations,
+                permissions=ext_spec.get("permissions"),
+            )
 
     types_config = build_type_configs_from_registry()
 
@@ -174,4 +206,6 @@ def get_tenant_fk_name() -> str:
     Defaults to ``'tenant'`` if not configured.
     """
     config = get_rebac_settings()
-    return config.get("tenant_fk_name", "tenant")
+    return config.get("tenant_fk_name") or "tenant"
+
+

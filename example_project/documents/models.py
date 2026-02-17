@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 from django_spicedb.core import register_type
-from django_spicedb.integrations.orm import RebacManager
+from django_spicedb.integrations.orm import RebacManager, RebacThroughManager
 from django_spicedb.models import RebacModel, Resource
 
 
@@ -220,6 +220,8 @@ class GroupMembership(models.Model):
         (ROLE_MEMBER, "Member"),
         (ROLE_MANAGER, "Manager"),
     ]
+
+    objects = RebacThroughManager()
 
     group = models.ForeignKey(
         Group,

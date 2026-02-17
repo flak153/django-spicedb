@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import RebacAdapter
@@ -18,8 +17,9 @@ def get_adapter() -> RebacAdapter:
     if _adapter is not None:
         return _adapter
 
-    config = getattr(settings, "REBAC", {}).get("adapter")
-    if not isinstance(config, dict):
+    from django_spicedb.conf import get_adapter_settings
+    config = get_adapter_settings()
+    if not isinstance(config, dict) or not config:
         raise ImproperlyConfigured("settings.REBAC['adapter'] must be configured to use SpiceDB.")
 
     endpoint = config.get("endpoint")

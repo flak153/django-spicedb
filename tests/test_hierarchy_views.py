@@ -40,9 +40,12 @@ class MockAdapter:
         key = (subject, relation, object_)
         return self._permissions.get(key, False)
 
-    def lookup_resources(self, subject, relation, resource_type, *, context=None, consistency=None):
+    def lookup_resources(self, subject, relation, resource_type, *, context=None, consistency=None, max_results=None):
         key = (subject, relation, resource_type)
-        return iter(self._lookup_results.get(key, []))
+        results = self._lookup_results.get(key, [])
+        if max_results is not None:
+            results = results[:max_results]
+        return iter(results)
 
     def write_tuples(self, tuples):
         pass

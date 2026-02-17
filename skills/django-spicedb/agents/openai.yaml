@@ -1,0 +1,4 @@
+interface:
+  display_name: "Django SpiceDB"
+  short_description: "Integrate django-spicedb in Django applications"
+  default_prompt: "Use $django-spicedb to model app permissions with RebacMeta and implement robust runtime checks."

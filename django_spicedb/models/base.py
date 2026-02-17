@@ -59,6 +59,9 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
                 }
     """
 
+    from django_spicedb.integrations.orm import RebacManager
+    objects = RebacManager()
+
     class Meta:
         abstract = True
 
@@ -70,6 +73,19 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
             subject: A Django model instance or "type:id" string
             relation: The relation name to grant
         """
+        from django.core.exceptions import ImproperlyConfigured
+
+        if self.pk is None:
+            raise ImproperlyConfigured(
+                "Cannot grant permissions on an unsaved model instance. "
+                "Save the instance first."
+            )
+        if isinstance(subject, models.Model) and subject.pk is None:
+            raise ImproperlyConfigured(
+                "Cannot grant permissions with an unsaved subject model instance. "
+                "Save the subject first."
+            )
+
         from ..adapters import get_adapter
         from ..adapters.base import TupleKey, TupleWrite
         from ..conf import get_type_for_model
@@ -104,6 +120,19 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
             subject: A Django model instance or "type:id" string
             relation: The relation name to revoke
         """
+        from django.core.exceptions import ImproperlyConfigured
+
+        if self.pk is None:
+            raise ImproperlyConfigured(
+                "Cannot revoke permissions on an unsaved model instance. "
+                "Save the instance first."
+            )
+        if isinstance(subject, models.Model) and subject.pk is None:
+            raise ImproperlyConfigured(
+                "Cannot revoke permissions with an unsaved subject model instance. "
+                "Save the subject first."
+            )
+
         from ..adapters import get_adapter
         from ..adapters.base import TupleKey
         from ..conf import get_type_for_model
@@ -128,16 +157,25 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
         )
         adapter.delete_tuples([tuple_key])
 
-    def has_perm(self, subject: "DjangoModel | str", permission: str) -> bool:
+    def has_perm(
+        self,
+        subject: "DjangoModel | str",
+        permission: str,
+        *,
+        context: dict | None = None,
+        consistency: str | None = None,
+    ) -> bool:
         """
         Check if a subject has a permission on this object.
 
         Args:
             subject: A Django model instance or "type:id" string
             permission: The permission to check
+            context: Optional caveat context for conditional permissions
+            consistency: Optional SpiceDB consistency level
 
         Returns:
             True if the subject has the permission
         """
         from ..runtime import can
-        return can(subject, permission, self)
+        return can(subject, permission, self, context=context, consistency=consistency)

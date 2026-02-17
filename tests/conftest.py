@@ -150,6 +150,24 @@ class RecordingAdapter:
         key = (subject, relation, resource_type, consistency, tuple(sorted((context or {}).items())))
         self._lookup_responses[key] = results
 
+    def batch_check(
+        self,
+        subject: str,
+        relation: str,
+        objects,
+        *,
+        context=None,
+        consistency=None,
+    ) -> list[bool]:
+        """Batch check - records as a single call."""
+        results = []
+        for obj in objects:
+            key = (subject, relation, obj, consistency, tuple(sorted((context or {}).items())))
+            results.append(self._check_responses.get(key, False))
+        # Record as a single batch call
+        self.check_calls.append(("batch", subject, relation, list(objects), consistency))
+        return results
+
     def lookup_resources(
         self,
         subject: str,
@@ -158,10 +176,14 @@ class RecordingAdapter:
         *,
         context: Mapping[str, Any] | None = None,
         consistency: str | None = None,
+        max_results: int | None = None,
     ):
         key = (subject, relation, resource_type, consistency, tuple(sorted((context or {}).items())))
         self.lookup_calls.append(key)
-        return iter(self._lookup_responses.get(key, []))
+        results = self._lookup_responses.get(key, [])
+        if max_results is not None:
+            results = results[:max_results]
+        return iter(results)
 
 
 @pytest.fixture

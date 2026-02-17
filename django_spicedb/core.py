@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import (
     Any,
     Dict,
@@ -80,6 +81,13 @@ def _infer_binding_kind(field: Any) -> Optional[str]:
 def register_rebac_model(model_class: Type["django_models.Model"]) -> None:
     """Register a model with RebacMeta to the global registry."""
     type_name = _get_type_name(model_class)
+    if type_name in _REBAC_MODEL_REGISTRY:
+        warnings.warn(
+            f"Type '{type_name}' is already registered as "
+            f"{_REBAC_MODEL_REGISTRY[type_name].__name__}. "
+            f"Overwriting with {model_class.__name__}.",
+            stacklevel=2,
+        )
     _REBAC_MODEL_REGISTRY[type_name] = model_class
 
 
@@ -92,15 +100,7 @@ def register_type(
     """
     Register a third-party model as a ReBAC type.
 
-    Use this for models you don't control (like django.contrib.auth.User).
-
-    Can be used as a decorator:
-
-        @register_type(type_name="user")
-        class CustomUser(AbstractUser):
-            pass
-
-    Or called directly:
+    Use this for models you don't control (like django.contrib.auth.User)::
 
         from django.contrib.auth.models import User
         register_type(User, type_name="user")
@@ -112,7 +112,7 @@ def register_type(
         permissions: Optional dict of permission_name → expression
 
     Returns:
-        The model class (for decorator usage)
+        The model class
     """
     # Create a synthetic RebacMeta if needed
     if not hasattr(model_class, 'RebacMeta'):
@@ -129,6 +129,13 @@ def register_type(
 
     # Use provided type_name or derive it
     final_type_name = type_name or _get_type_name(model_class)
+    if final_type_name in _REBAC_MODEL_REGISTRY:
+        warnings.warn(
+            f"Type '{final_type_name}' is already registered as "
+            f"{_REBAC_MODEL_REGISTRY[final_type_name].__name__}. "
+            f"Overwriting with {model_class.__name__}.",
+            stacklevel=2,
+        )
     _REBAC_MODEL_REGISTRY[final_type_name] = model_class
 
     return model_class

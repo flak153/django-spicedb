@@ -1,0 +1,4 @@
+interface:
+  display_name: "Django SpiceDB Contributor"
+  short_description: "Develop and maintain django-spicedb internals safely"
+  default_prompt: "Use $django-spicedb-contributor to implement a library-internal change with targeted tests."
