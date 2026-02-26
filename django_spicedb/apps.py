@@ -24,3 +24,10 @@ class DjangoSpicedbConfig(AppConfig):
         reset_type_graph_cache()
 
         registry.refresh()
+
+        # Opt-in: auto-publish schema + backfill after migrate
+        from .conf import get_rebac_settings
+        if get_rebac_settings().get("sync_on_migrate", True):
+            from django.db.models.signals import post_migrate
+            from .sync.migrate_hook import handle_post_migrate
+            post_migrate.connect(handle_post_migrate)
