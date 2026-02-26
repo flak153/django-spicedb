@@ -1,6 +1,6 @@
 [project]
 name = "django-spicedb"
-version = "0.2.1"
+version = "0.3.0"
 description = "Declarative relationship-based access control (ReBAC) for Django, backed by SpiceDB"
 authors = [
     {name = "Mohammed R. Ali", email = "flakgun153@gmail.com"}
@@ -50,6 +50,7 @@ pytest-django = "^4.11.1"
 playwright = "^1.56.0"
 requests = "^2.32.5"
 ruff = "^0.15.1"
+mypy = "^1.18.2"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "example_project.settings"
