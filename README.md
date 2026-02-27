@@ -374,6 +374,48 @@ class DocumentViewSet(ModelViewSet):
 
 ---
 
+## Testing
+
+django-spicedb ships a pytest plugin that spins up an ephemeral SpiceDB
+container via [testcontainers](https://testcontainers-python.readthedocs.io/).
+No Docker Compose, no shared state between runs.
+
+```bash
+pip install django-spicedb[test]
+```
+
+The plugin registers three session-scoped fixtures automatically (no
+conftest boilerplate needed):
+
+| Fixture | Scope | Description |
+|---------|-------|-------------|
+| `spicedb_container` | session | Starts an in-memory SpiceDB (`serve-testing`) |
+| `spicedb_grpc_endpoint` | session | Returns the `host:port` string |
+| `spicedb_adapter` | session | A `SpiceDBAdapter` wired to the container; publishes schema on creation and overrides the global adapter |
+
+### Usage
+
+```python
+def test_owner_can_view(spicedb_adapter):
+    """spicedb_adapter is already connected and the schema is published."""
+    from django_spicedb.adapters.base import TupleKey, TupleWrite
+
+    spicedb_adapter.write_tuples([
+        TupleWrite(key=TupleKey(
+            object="document:1",
+            relation="owner",
+            subject="user:42",
+        ))
+    ])
+
+    assert spicedb_adapter.check("user:42", "view", "document:1")
+```
+
+If testcontainers is not installed the fixtures `pytest.skip()` automatically,
+so your unit tests still run without Docker.
+
+---
+
 ## Full Tutorial
 
 Want a complete walkthrough? **[Read the tutorial](docs/tutorial.md)** - builds a document management system step-by-step, explaining every concept along the way.

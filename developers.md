@@ -97,7 +97,7 @@ Shadow mode is the default: decisions are logged but not enforced until toggled 
   ```bash
   poetry run pytest
   ```
-- **Lint / type check** (planned additions)  
+- **Lint / type check**
   ```bash
   poetry run ruff check
   poetry run mypy django_spicedb

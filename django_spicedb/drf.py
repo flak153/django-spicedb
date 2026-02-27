@@ -6,7 +6,8 @@ try:
 except ImportError:
     raise ImportError(
         "djangorestframework is required for DRF integration. "
-        "Install it with: pip install djangorestframework"
+        "Install it with: pip install django-spicedb[drf] "
+        "(or: pip install djangorestframework)."
     )
 
 from django_spicedb.runtime.evaluator import PermissionEvaluator

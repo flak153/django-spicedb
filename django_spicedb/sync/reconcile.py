@@ -35,7 +35,8 @@ def reconcile_type(
 ) -> ReconcileResult:
     """Reconcile tuples for a single type.
 
-    Computes expected tuples from Django state and optionally writes missing tuples.
+    Computes expected tuples from Django state and optionally re-writes
+    those expected tuples to SpiceDB.
 
     NOTE: Detecting "stale" tuples (in SpiceDB but not in Django) requires a
     read_tuples() method on the adapter, which is not currently part of the
@@ -44,11 +45,11 @@ def reconcile_type(
 
     Args:
         type_name: Name of the ReBAC type to reconcile
-        fix: If True, write missing tuples to SpiceDB
+        fix: If True, re-write expected tuples to SpiceDB
         adapter: Optional adapter instance (defaults to factory.get_adapter())
 
     Returns:
-        ReconcileResult with counts of expected, missing, and stale tuples
+        ReconcileResult with counts of expected, to-write, and stale tuples
     """
     if adapter is None:
         adapter = factory.get_adapter()
@@ -126,7 +127,7 @@ def reconcile_all(
     """Reconcile tuples for all types (or a filtered list).
 
     Args:
-        fix: If True, write missing tuples to SpiceDB
+        fix: If True, re-write expected tuples to SpiceDB
         types: Optional list of type names to reconcile (defaults to all types)
         adapter: Optional adapter instance (defaults to factory.get_adapter())
 
@@ -167,7 +168,7 @@ def reconcile_tuples(
             return [r.type_name for r in results if r.to_write > 0]
 
     Args:
-        fix: If True, write missing tuples to SpiceDB
+        fix: If True, re-write expected tuples to SpiceDB
         types: Optional list of type names to reconcile (defaults to all types)
         dry_run: If True, just report what would be done (same as fix=False
             but with logging)

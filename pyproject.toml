@@ -33,6 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 drf = ["djangorestframework>=3.14"]
 yaml = ["pyyaml>=6.0"]
+test = ["testcontainers>=4.0"]
 
 [project.urls]
 Homepage = "https://github.com/flak153/django-spicedb"
@@ -55,6 +56,9 @@ mypy = "^1.18.2"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "example_project.settings"
 python_files = ["tests/test_*.py"]
+
+[project.entry-points.pytest11]
+django_spicedb = "django_spicedb.testing"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

@@ -7,7 +7,8 @@ from typing import Any, Mapping
 import grpc
 import pytest
 
-from django_spicedb.adapters import reset_adapter, set_adapter
+from django_spicedb.adapters import set_adapter
+import django_spicedb.adapters.factory as _factory
 from django_spicedb.adapters.base import TupleKey, TupleWrite
 from django_spicedb.adapters.spicedb import SpiceDBAdapter
 
@@ -188,7 +189,10 @@ class RecordingAdapter:
 
 @pytest.fixture
 def recording_adapter() -> Iterator[RecordingAdapter]:
+    previous = _factory._adapter
     adapter = RecordingAdapter()
     set_adapter(adapter)
     yield adapter
-    reset_adapter()
+    # Restore the previous adapter (e.g. the session-scoped plugin adapter)
+    # instead of calling reset_adapter() which would close it.
+    set_adapter(previous)

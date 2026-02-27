@@ -17,5 +17,8 @@ spicedb/
 # Poetry files
 poetry.lock.bak
 
+# Build artifacts
+dist/
+
 # Docker
 *.pid

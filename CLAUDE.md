@@ -65,9 +65,10 @@ poetry run ruff check
 - **runtime/** - Permission evaluation
   - `evaluator.py` - `PermissionEvaluator` class (request-scoped, batched checks, caching) and `can()` convenience function
 
-- **integrations/** - Django/DRF integration points
+- **integrations/** - Django integration points
   - `orm.py` - `RebacManager` and `RebacQuerySet` with `.accessible_by(user, relation)` method
-  - `drf.py` - `ReBACPermission` and `ReBACFilterBackend` (requires DRF extra)
+
+- **drf.py** - DRF integration (`ReBACPermission`, `ReBACFilterBackend`; requires DRF extra)
 
 - **conf.py** - Settings loader for `settings.REBAC`
 
