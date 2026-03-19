@@ -55,7 +55,7 @@ def spicedb_container():
 
     container = (
         DockerContainer(_SPICEDB_IMAGE)
-        .with_command(f"serve-testing --grpc-preshared-key {_SPICEDB_TOKEN}")
+        .with_command("serve-testing")
         .with_exposed_ports(_SPICEDB_GRPC_PORT)
     )
     container.start()
