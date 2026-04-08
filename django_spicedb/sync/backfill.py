@@ -7,6 +7,7 @@ from typing import Any, Iterable, Mapping
 from django.utils.module_loading import import_string
 
 from django_spicedb.adapters.base import RebacAdapter, TupleKey, TupleWrite
+from django_spicedb.runtime.last_write_token import record_write_token
 
 
 def backfill_tuples(
@@ -19,17 +20,19 @@ def backfill_tuples(
 
     buffer: list[TupleWrite] = []
     total = 0
+    last_token = ""
     for tuple_write in tuples:
         buffer.append(tuple_write)
         if len(buffer) >= batch_size:
-            adapter.write_tuples(buffer)
+            last_token = adapter.write_tuples(buffer) or last_token
             total += len(buffer)
             buffer = []
 
     if buffer:
-        adapter.write_tuples(buffer)
+        last_token = adapter.write_tuples(buffer) or last_token
         total += len(buffer)
 
+    record_write_token(last_token)
     return total
 
 

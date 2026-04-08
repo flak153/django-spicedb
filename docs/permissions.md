@@ -150,3 +150,71 @@ The owner can always manage. Also, anyone who is a manager on the linked team ca
 view = verified_member & !suspended
 ```
 Only verified members can view, and they must not be suspended.
+
+## Read-After-Write Freshness
+
+SpiceDB's default read consistency (`minimize_latency`) serves results from the dispatcher cache, which has a server-side TTL of ~5 seconds. That means a permission check issued immediately after a write can return a stale result — for example, a user who was just granted access via `document.grant(user, "editor")` may get a false `PermissionDenied` on a check that runs in the same request. This causes real bugs in "create-then-redirect" flows.
+
+django-spicedb fixes this automatically by propagating the ZedToken returned from every write through a `ContextVar`. Subsequent reads in the same logical context (thread or async task) will transparently upgrade their consistency to `at_least_as_fresh=<token>`, which guarantees the read sees that write.
+
+### What you get for free
+
+`grant()` and `revoke()` return the ZedToken:
+
+```python
+token = document.grant(user, "editor")   # returns a non-empty ZedToken
+assert document.has_perm(user, "view")    # True — no explicit consistency needed
+```
+
+The sync-registry signal handlers (FK `post_save`, M2M `m2m_changed`, through-table `post_save`, bulk helpers) all record the token they received from SpiceDB inside their `transaction.on_commit()` callback, so the guarantee holds for ORM-driven writes too. The `on_commit` placement is intentional: a rolled-back transaction never poisons the read path with a token for data that doesn't exist.
+
+### WriteTokenMiddleware
+
+To prevent a token recorded during one request from leaking into the next, add the middleware:
+
+```python
+# settings.py
+MIDDLEWARE = [
+    # ...
+    "django_spicedb.middleware.WriteTokenMiddleware",
+    # ...
+]
+```
+
+It's safe under both WSGI (sync) and ASGI (async), because the underlying `ContextVar` is copied per task.
+
+### Opting out of the upgrade
+
+The default `can()` consistency mode is unchanged — it's still `minimize_latency`, so pure reads (no prior write in the context) pay no extra latency. The contextvar **only** kicks in after a same-context write.
+
+If a specific read does not need freshness even after a same-context write, pass `consistency` explicitly:
+
+```python
+# Explicit "I don't care about freshness" — forces minimize_latency
+can(user, "view", document, consistency="minimize_latency")
+```
+
+An explicit `consistency=` argument always wins over the propagated token.
+
+### Low-level API
+
+For callers that want to interact with the contextvar directly:
+
+```python
+from django_spicedb.runtime import (
+    get_last_write_token,
+    record_write_token,
+    use_last_write_token,
+)
+
+# Inspect the current context's last-write token
+token = get_last_write_token()  # '' if none recorded
+
+# Manually record a token (e.g. from a raw adapter call)
+record_write_token(token)
+
+# Scope propagation to a with-block
+with use_last_write_token():
+    # inside here the token starts as '' and is restored on exit
+    ...
+```

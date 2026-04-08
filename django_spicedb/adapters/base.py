@@ -25,11 +25,19 @@ class RebacAdapter(Protocol):
     def publish_schema(self, schema: str) -> str:
         """Apply the given schema and return an adapter-specific token."""
 
-    def write_tuples(self, tuples: Sequence[TupleWrite]) -> None:
-        """Persist tuple writes."""
+    def write_tuples(self, tuples: Sequence[TupleWrite]) -> str:
+        """Persist tuple writes.
 
-    def delete_tuples(self, tuples: Sequence[TupleKey]) -> None:
-        """Delete tuples by key."""
+        Returns the ZedToken from the write for use with ``at_least_as_fresh``
+        reads, or an empty string if no tuples were written (empty input).
+        """
+
+    def delete_tuples(self, tuples: Sequence[TupleKey]) -> str:
+        """Delete tuples by key.
+
+        Returns the ZedToken from the delete for use with ``at_least_as_fresh``
+        reads, or an empty string if no tuples were deleted (empty input).
+        """
 
     def check(
         self,

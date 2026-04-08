@@ -106,11 +106,23 @@ class RecordingAdapter:
         self.zedtokens.append(token)
         return token
 
-    def write_tuples(self, tuples):
+    def write_tuples(self, tuples) -> str:
+        tuples = list(tuples)
+        if not tuples:
+            return ""
         self.writes.extend(tuples)
+        token = f"rec-{len(self.zedtokens) + 1}"
+        self.zedtokens.append(token)
+        return token
 
-    def delete_tuples(self, tuples):
+    def delete_tuples(self, tuples) -> str:
+        tuples = list(tuples)
+        if not tuples:
+            return ""
         self.deletes.extend(tuples)
+        token = f"rec-{len(self.zedtokens) + 1}"
+        self.zedtokens.append(token)
+        return token
 
     def set_check_response(
         self,
@@ -134,9 +146,16 @@ class RecordingAdapter:
         context: Mapping[str, Any] | None = None,
         consistency: str | None = None,
     ) -> bool:
-        key = (subject, relation, object_, consistency, tuple(sorted((context or {}).items())))
+        ctx_key = tuple(sorted((context or {}).items()))
+        key = (subject, relation, object_, consistency, ctx_key)
         self.check_calls.append(key)
-        return self._check_responses.get(key, False)
+        if key in self._check_responses:
+            return self._check_responses[key]
+        # Fallback: callers that registered a response without specifying a
+        # consistency should still match when the evaluator auto-upgrades
+        # consistency via the last-write-token contextvar.
+        fallback_key = (subject, relation, object_, None, ctx_key)
+        return self._check_responses.get(fallback_key, False)
 
     def set_lookup_response(
         self,
@@ -161,10 +180,15 @@ class RecordingAdapter:
         consistency=None,
     ) -> list[bool]:
         """Batch check - records as a single call."""
+        ctx_key = tuple(sorted((context or {}).items()))
         results = []
         for obj in objects:
-            key = (subject, relation, obj, consistency, tuple(sorted((context or {}).items())))
-            results.append(self._check_responses.get(key, False))
+            key = (subject, relation, obj, consistency, ctx_key)
+            if key in self._check_responses:
+                results.append(self._check_responses[key])
+            else:
+                fallback = (subject, relation, obj, None, ctx_key)
+                results.append(self._check_responses.get(fallback, False))
         # Record as a single batch call
         self.check_calls.append(("batch", subject, relation, list(objects), consistency))
         return results
@@ -179,9 +203,14 @@ class RecordingAdapter:
         consistency: str | None = None,
         max_results: int | None = None,
     ):
-        key = (subject, relation, resource_type, consistency, tuple(sorted((context or {}).items())))
+        ctx_key = tuple(sorted((context or {}).items()))
+        key = (subject, relation, resource_type, consistency, ctx_key)
         self.lookup_calls.append(key)
-        results = self._lookup_responses.get(key, [])
+        if key in self._lookup_responses:
+            results = self._lookup_responses[key]
+        else:
+            fallback = (subject, relation, resource_type, None, ctx_key)
+            results = self._lookup_responses.get(fallback, [])
         if max_results is not None:
             results = results[:max_results]
         return iter(results)

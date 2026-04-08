@@ -12,6 +12,7 @@ from django.db.models import Model
 import django_spicedb.conf as conf
 from django_spicedb.adapters import factory
 from django_spicedb.adapters.base import RebacAdapter
+from django_spicedb.runtime.last_write_token import get_last_write_token
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,12 @@ class PermissionEvaluator:
                 "Must be non-empty and contain only alphanumeric characters and underscores."
             )
         object_ref = _object_to_reference(obj)
+        effective_consistency = _effective_consistency(consistency)
         cache_key = (
             relation,
             object_ref,
             _freeze_context(context, self._default_context),
-            consistency,
+            effective_consistency,
         )
         if cache_key not in self._cache:
             ctx = _merge_context(context, self._default_context)
@@ -61,7 +63,7 @@ class PermissionEvaluator:
                 relation=relation,
                 object_=object_ref,
                 context=ctx,
-                consistency=consistency,
+                consistency=effective_consistency,
             )
             self._cache[cache_key] = result
         return self._cache[cache_key]
@@ -87,10 +89,11 @@ class PermissionEvaluator:
 
         ctx = _merge_context(context, self._default_context)
         frozen_ctx = _freeze_context(context, self._default_context)
+        effective_consistency = _effective_consistency(consistency)
 
         for obj in objects_list:
             object_ref = _object_to_reference(obj)
-            cache_key = (relation, object_ref, frozen_ctx, consistency)
+            cache_key = (relation, object_ref, frozen_ctx, effective_consistency)
             if cache_key in self._cache:
                 results[obj] = self._cache[cache_key]
             else:
@@ -103,10 +106,10 @@ class PermissionEvaluator:
                 relation=relation,
                 objects=uncached_refs,
                 context=ctx,
-                consistency=consistency,
+                consistency=effective_consistency,
             )
             for obj, object_ref, allowed in zip(uncached, uncached_refs, batch_results):
-                cache_key = (relation, object_ref, frozen_ctx, consistency)
+                cache_key = (relation, object_ref, frozen_ctx, effective_consistency)
                 self._cache[cache_key] = allowed
                 results[obj] = allowed
 
@@ -128,7 +131,7 @@ class PermissionEvaluator:
             relation=relation,
             resource_type=resource_type,
             context=ctx,
-            consistency=consistency,
+            consistency=_effective_consistency(consistency),
             max_results=max_results,
         )
         return list(ids)
@@ -151,6 +154,25 @@ def can(
 
 # ---------------------------------------------------------------------------
 # Helpers
+
+
+def _effective_consistency(explicit: str | None) -> str | None:
+    """Return the consistency level to use for a read.
+
+    If the caller passed an explicit consistency, honor it. Otherwise, if the
+    current context has a recorded write ZedToken, use it as an
+    ``at_least_as_fresh`` input so the read sees that write. Otherwise fall
+    through to the adapter default (``minimize_latency``).
+
+    The :class:`SpiceDBAdapter._consistency` helper already treats any
+    non-sentinel string as a ZedToken for ``at_least_as_fresh``, so passing
+    the token directly works without further plumbing.
+    """
+
+    if explicit is not None:
+        return explicit
+    token = get_last_write_token()
+    return token or None
 
 
 def _subject_to_reference(subject: Any) -> str:

@@ -65,13 +65,18 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
     class Meta:
         abstract = True
 
-    def grant(self, subject: "DjangoModel | str", relation: str) -> None:
+    def grant(self, subject: "DjangoModel | str", relation: str) -> str:
         """
         Grant a relation to a subject on this object.
 
         Args:
             subject: A Django model instance or "type:id" string
             relation: The relation name to grant
+
+        Returns:
+            The ZedToken from the write. Also recorded in the current context
+            so a subsequent ``can()`` in the same request auto-upgrades to
+            ``at_least_as_fresh`` consistency.
         """
         from django.core.exceptions import ImproperlyConfigured
 
@@ -89,6 +94,7 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
         from ..adapters import get_adapter
         from ..adapters.base import TupleKey, TupleWrite
         from ..conf import get_type_for_model
+        from ..runtime.last_write_token import record_write_token
 
         adapter = get_adapter()
 
@@ -110,15 +116,22 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
                 subject=subject_ref,
             )
         )
-        adapter.write_tuples([tuple_write])
+        token = adapter.write_tuples([tuple_write])
+        record_write_token(token)
+        return token
 
-    def revoke(self, subject: "DjangoModel | str", relation: str) -> None:
+    def revoke(self, subject: "DjangoModel | str", relation: str) -> str:
         """
         Revoke a relation from a subject on this object.
 
         Args:
             subject: A Django model instance or "type:id" string
             relation: The relation name to revoke
+
+        Returns:
+            The ZedToken from the delete. Also recorded in the current context
+            so a subsequent ``can()`` in the same request auto-upgrades to
+            ``at_least_as_fresh`` consistency.
         """
         from django.core.exceptions import ImproperlyConfigured
 
@@ -136,6 +149,7 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
         from ..adapters import get_adapter
         from ..adapters.base import TupleKey
         from ..conf import get_type_for_model
+        from ..runtime.last_write_token import record_write_token
 
         adapter = get_adapter()
 
@@ -155,7 +169,9 @@ class RebacModel(models.Model, metaclass=RebacModelBase):
             relation=relation,
             subject=subject_ref,
         )
-        adapter.delete_tuples([tuple_key])
+        token = adapter.delete_tuples([tuple_key])
+        record_write_token(token)
+        return token
 
     def has_perm(
         self,

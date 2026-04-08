@@ -60,19 +60,20 @@ class SpiceDBAdapter(RebacAdapter):
         return response.written_at.token
 
     # ---------------------------------------------------------------- tuples --
-    def write_tuples(self, tuples: Sequence[TupleWrite]) -> None:
+    def write_tuples(self, tuples: Sequence[TupleWrite]) -> str:
         updates = [
             self._build_update(tuple_write, core_pb.RelationshipUpdate.Operation.OPERATION_TOUCH)
             for tuple_write in tuples
         ]
         if not updates:
-            return
-        self._permission_client.WriteRelationships(
+            return ""
+        response = self._permission_client.WriteRelationships(
             perm_pb.WriteRelationshipsRequest(updates=updates),
             metadata=self._metadata,
         )
+        return response.written_at.token
 
-    def delete_tuples(self, tuples: Sequence[TupleKey]) -> None:
+    def delete_tuples(self, tuples: Sequence[TupleKey]) -> str:
         updates = [
             self._build_update(
                 TupleWrite(key=key),
@@ -81,11 +82,12 @@ class SpiceDBAdapter(RebacAdapter):
             for key in tuples
         ]
         if not updates:
-            return
-        self._permission_client.WriteRelationships(
+            return ""
+        response = self._permission_client.WriteRelationships(
             perm_pb.WriteRelationshipsRequest(updates=updates),
             metadata=self._metadata,
         )
+        return response.written_at.token
 
     # -------------------------------------------------------------- permission
     def check(

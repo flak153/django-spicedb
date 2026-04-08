@@ -14,6 +14,7 @@ from django.utils.module_loading import import_string
 import django_spicedb.conf as conf
 from django_spicedb.adapters import factory
 from django_spicedb.adapters.base import TupleKey, TupleWrite
+from django_spicedb.runtime.last_write_token import record_write_token
 from django_spicedb.types.graph import TypeConfig
 
 
@@ -212,10 +213,14 @@ def _register_model(type_name: str, model: type[Model], cfg: TypeConfig) -> None
         # Wrap in transaction.on_commit to avoid phantom tuples on rollback
         def do_sync():
             adapter = factory.get_adapter()
+            token = ""
             if deletes:
-                adapter.delete_tuples(deletes)
+                token = adapter.delete_tuples(deletes) or token
             if writes:
-                adapter.write_tuples(writes)
+                # Writes happen after deletes on the same stream, so this
+                # token is strictly at least as fresh as the delete's.
+                token = adapter.write_tuples(writes) or token
+            record_write_token(token)
 
         transaction.on_commit(do_sync)
 
@@ -226,7 +231,8 @@ def _register_model(type_name: str, model: type[Model], cfg: TypeConfig) -> None
 
         # Wrap in transaction.on_commit
         def do_delete():
-            factory.get_adapter().delete_tuples(keys)
+            token = factory.get_adapter().delete_tuples(keys)
+            record_write_token(token)
 
         transaction.on_commit(do_delete)
 
@@ -380,7 +386,8 @@ def _make_m2m_handler(
             ]
             if writes:
                 def do_write():
-                    factory.get_adapter().write_tuples(writes)
+                    token = factory.get_adapter().write_tuples(writes)
+                    record_write_token(token)
                 transaction.on_commit(do_write)
         elif action == "post_remove":
             keys = [
@@ -393,7 +400,8 @@ def _make_m2m_handler(
             ]
             if keys:
                 def do_delete():
-                    factory.get_adapter().delete_tuples(keys)
+                    token = factory.get_adapter().delete_tuples(keys)
+                    record_write_token(token)
                 transaction.on_commit(do_delete)
         elif action == "post_clear":
             # Get IDs captured during pre_clear
@@ -412,7 +420,8 @@ def _make_m2m_handler(
             ]
             if keys:
                 def do_delete():
-                    factory.get_adapter().delete_tuples(keys)
+                    token = factory.get_adapter().delete_tuples(keys)
+                    record_write_token(token)
                 transaction.on_commit(do_delete)
 
     return handler
@@ -618,10 +627,12 @@ def _make_through_handlers(
 
         def do_sync():
             adapter = factory.get_adapter()
+            token = ""
             if deletes:
-                adapter.delete_tuples(deletes)
+                token = adapter.delete_tuples(deletes) or token
             if writes:
-                adapter.write_tuples(writes)
+                token = adapter.write_tuples(writes) or token
+            record_write_token(token)
 
         transaction.on_commit(do_sync)
 
@@ -639,7 +650,8 @@ def _make_through_handlers(
             return
 
         def do_delete():
-            factory.get_adapter().delete_tuples([key])
+            token = factory.get_adapter().delete_tuples([key])
+            record_write_token(token)
 
         transaction.on_commit(do_delete)
 
@@ -692,7 +704,8 @@ def sync_instances(instances: List[Model]) -> None:
 
     # Defer write until transaction commits
     def do_sync():
-        factory.get_adapter().write_tuples(all_writes)
+        token = factory.get_adapter().write_tuples(all_writes)
+        record_write_token(token)
 
     transaction.on_commit(do_sync)
 
@@ -758,7 +771,8 @@ def sync_through_instances(instances: List[Model]) -> None:
 
     # Defer write until transaction commits
     def do_sync():
-        factory.get_adapter().write_tuples(all_writes)
+        token = factory.get_adapter().write_tuples(all_writes)
+        record_write_token(token)
 
     transaction.on_commit(do_sync)
 
@@ -883,10 +897,12 @@ def _sync_queryset_update_impl(queryset, raw_update_fn, **updated_fields) -> int
     if deletes or writes:
         def do_sync():
             adapter = factory.get_adapter()
+            token = ""
             if deletes:
-                adapter.delete_tuples(deletes)
+                token = adapter.delete_tuples(deletes) or token
             if writes:
-                adapter.write_tuples(writes)
+                token = adapter.write_tuples(writes) or token
+            record_write_token(token)
 
         transaction.on_commit(do_sync)
 
