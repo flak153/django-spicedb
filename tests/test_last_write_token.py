@@ -212,6 +212,17 @@ def test_record_write_token_ignores_empty():
 
 # ---------------------------------------------------------------------------
 # Middleware
+#
+# The middleware requires ``django.contrib.sessions`` in INSTALLED_APPS and
+# needs a ``request.session`` attribute on each request. Tests use a simple
+# ``types.SimpleNamespace(session={...})`` stand-in — no real session backend
+# is required.
+
+
+def _fake_request(session: dict | None = None):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(session=session if session is not None else {})
 
 
 def test_middleware_sync_scopes_token():
@@ -227,7 +238,7 @@ def test_middleware_sync_scopes_token():
     with use_last_write_token():
         record_write_token("outer")
         middleware = WriteTokenMiddleware(fake_view)
-        assert middleware(object()) == "ok"
+        assert middleware(_fake_request()) == "ok"
         assert captured_inside == ["mw-sync"]
         # After the middleware returns, the outer context's token is restored.
         assert get_last_write_token() == "outer"
@@ -245,9 +256,180 @@ def test_middleware_async_scopes_token():
         with use_last_write_token():
             record_write_token("outer")
             middleware = WriteTokenMiddleware(fake_view)
-            result = await middleware(object())
+            result = await middleware(_fake_request())
             assert result == "ok"
             assert captured_inside == ["mw-async"]
             assert get_last_write_token() == "outer"
 
     asyncio.run(run())
+
+
+# ---------------------------------------------------------------------------
+# Session persistence (v0.5.0)
+
+
+from django_spicedb.middleware import SESSION_TOKEN_KEY  # noqa: E402
+
+
+def _sync_middleware(view):
+    return WriteTokenMiddleware(view)
+
+
+def test_middleware_requires_sessions_app(settings):
+    from django.core.exceptions import ImproperlyConfigured
+
+    settings.INSTALLED_APPS = [
+        app for app in settings.INSTALLED_APPS if app != "django.contrib.sessions"
+    ]
+    with pytest.raises(ImproperlyConfigured, match="django.contrib.sessions"):
+        WriteTokenMiddleware(lambda request: "ok")
+
+
+def test_rehydrate_from_session():
+    captured: list[str] = []
+
+    def view(request):
+        captured.append(get_last_write_token())
+        return "ok"
+
+    session = {SESSION_TOKEN_KEY: "zt:seeded"}
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session))
+
+    assert captured == ["zt:seeded"]
+
+
+def test_view_records_token_session_persists():
+    def view(request):
+        record_write_token("zt:new")
+        return "ok"
+
+    session: dict = {}
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session))
+
+    assert session[SESSION_TOKEN_KEY] == "zt:new"
+
+
+def test_token_bridges_two_requests_via_session():
+    """Core assertion: a token written in request 1 is visible to request 2
+    via the session, even after the contextvar has been cleared between
+    requests (simulating a fresh process context)."""
+
+    session: dict = {}
+
+    def writing_view(request):
+        record_write_token("zt:first")
+        return "ok"
+
+    captured: list[str] = []
+
+    def reading_view(request):
+        captured.append(get_last_write_token())
+        return "ok"
+
+    # Request 1: writes the token.
+    with use_last_write_token():
+        _sync_middleware(writing_view)(_fake_request(session))
+    assert session[SESSION_TOKEN_KEY] == "zt:first"
+
+    # Simulate a brand-new process context between requests by resetting
+    # the contextvar to empty. The session dict survives (it's the cookie /
+    # backend).
+    with use_last_write_token():
+        # Request 2: must see the token via rehydration from the session.
+        _sync_middleware(reading_view)(_fake_request(session))
+
+    assert captured == ["zt:first"]
+
+
+def test_token_isolation_between_sessions():
+    session_a = {SESSION_TOKEN_KEY: "zt:for-A"}
+    session_b: dict = {}
+    captured: list[str] = []
+
+    def view(request):
+        captured.append(get_last_write_token())
+        return "ok"
+
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session_b))
+
+    assert captured == [""]
+    # Sanity: session A untouched by our request on session B.
+    assert session_a == {SESSION_TOKEN_KEY: "zt:for-A"}
+
+
+def test_unchanged_token_does_not_dirty_session():
+    """When the post-view token equals what's already in the session, the
+    middleware must not re-stamp it (avoids dirtying the session on every
+    authenticated read)."""
+
+    class SpySession(dict):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
+            self.setitem_calls: list[tuple] = []
+
+        def __setitem__(self, key, value):
+            self.setitem_calls.append((key, value))
+            super().__setitem__(key, value)
+
+    session = SpySession({SESSION_TOKEN_KEY: "zt:X"})
+
+    def view(request):
+        # The view does nothing that would change the token — the contextvar
+        # gets populated by rehydration from the session, stays at "zt:X".
+        return "ok"
+
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session))
+
+    # No __setitem__ calls with the token key after the request.
+    assert not any(k == SESSION_TOKEN_KEY for (k, _) in session.setitem_calls)
+    assert session[SESSION_TOKEN_KEY] == "zt:X"
+
+
+def test_anonymous_session_persists_token():
+    """Anonymous users have (lazy) sessions too; persistence still works."""
+
+    session: dict = {}
+
+    def view(request):
+        record_write_token("zt:anon")
+        return "ok"
+
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session))
+
+    assert session[SESSION_TOKEN_KEY] == "zt:anon"
+
+
+def test_middleware_async_rehydrate_and_persist():
+    session = {SESSION_TOKEN_KEY: "zt:async-in"}
+    captured: list[str] = []
+
+    async def view(request):
+        captured.append(get_last_write_token())
+        record_write_token("zt:async-out")
+        return "ok"
+
+    async def run():
+        with use_last_write_token():
+            mw = WriteTokenMiddleware(view)
+            await mw(_fake_request(session))
+
+    asyncio.run(run())
+    assert captured == ["zt:async-in"]
+    assert session[SESSION_TOKEN_KEY] == "zt:async-out"
+
+
+def test_empty_contextvar_does_not_stamp_empty_string():
+    session: dict = {}
+
+    def view(request):
+        return "ok"
+
+    with use_last_write_token():
+        _sync_middleware(view)(_fake_request(session))
+
+    assert SESSION_TOKEN_KEY not in session

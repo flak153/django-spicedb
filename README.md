@@ -312,6 +312,35 @@ Bindings are auto-inferred from field types:
 
 ---
 
+## Read-After-Write Freshness
+
+SpiceDB's default `minimize_latency` read consistency hits a ~5s dispatcher cache, so a `grant()` followed immediately by a `can()` in the same request — or the next request after a redirect — can return a stale `False`. django-spicedb fixes this automatically by propagating the ZedToken returned from every write.
+
+Add `WriteTokenMiddleware` to get both same-request *and* cross-request freshness:
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.sessions",   # REQUIRED by WriteTokenMiddleware
+]
+
+MIDDLEWARE = [
+    # ...
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    # MUST be listed *below* SessionMiddleware.
+    "django_spicedb.middleware.WriteTokenMiddleware",
+]
+```
+
+The middleware persists the last-write token in `request.session` so that a form POST that calls `obj.grant(user, "creator")` and redirects to a detail view sees `can(user, "view", obj)` return `True` on the next request — no race against SpiceDB's dispatcher cache.
+
+**Pure-API backends (DRF + JWT, no Django sessions)**: don't install this middleware. Same-request freshness still works via the contextvar that `PermissionEvaluator` reads directly.
+
+Full details, low-level API, and opt-out: [docs/permissions.md → Read-After-Write Freshness](docs/permissions.md#read-after-write-freshness).
+
+---
+
 ## Management Commands
 
 ```bash

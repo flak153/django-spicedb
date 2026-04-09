@@ -170,18 +170,42 @@ The sync-registry signal handlers (FK `post_save`, M2M `m2m_changed`, through-ta
 
 ### WriteTokenMiddleware
 
-To prevent a token recorded during one request from leaking into the next, add the middleware:
+`WriteTokenMiddleware` does two jobs:
+
+1. **Scopes** the last-write ZedToken to a single request via `ContextVar`, so a token recorded during one request never leaks into the next.
+2. **Persists** the token across requests via `request.session`, so a write in request N (e.g. a form POST that calls `grant()`) is visible to reads in request N+1 (e.g. the redirect target's `can()` check) on the same session. This fixes the common "create-then-redirect" stale-read bug.
 
 ```python
 # settings.py
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.sessions",  # REQUIRED
+    # ...
+]
+
 MIDDLEWARE = [
     # ...
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    # WriteTokenMiddleware MUST be listed *below* SessionMiddleware, so
+    # that SessionMiddleware saves our modifications to request.session on
+    # the way out.
     "django_spicedb.middleware.WriteTokenMiddleware",
     # ...
 ]
 ```
 
-It's safe under both WSGI (sync) and ASGI (async), because the underlying `ContextVar` is copied per task.
+It's safe under both WSGI (sync) and ASGI (async), because the underlying `ContextVar` is copied per task, and persistence goes through `request.session` which Django already handles correctly in both modes.
+
+**Requirements**:
+
+- `django.contrib.sessions` must be in `INSTALLED_APPS`. The middleware raises `ImproperlyConfigured` at startup otherwise.
+- Must be listed **below** `SessionMiddleware` in `MIDDLEWARE`. If you put it above, session changes happen after `SessionMiddleware` has already saved, and the token silently never persists.
+
+**Session-less backends (DRF + JWT, etc.)**: if you don't use Django sessions, don't install this middleware. Within a single request, `PermissionEvaluator` still reads the contextvar directly, so same-request `grant()` → `can()` flows still work. You only lose cross-request propagation.
+
+**Token lifecycle**: the token lives in the session as an opaque string under the key `_django_spicedb_write_token`. It expires when the session does (logout, cookie max-age). There is no separate TTL — a caught-up replica handles old tokens for free via `at_least_as_fresh`.
+
+**Concurrent writes**: if two requests on the same session both record tokens, the last-finishing one wins. ZedTokens are opaque and can't be compared locally; both witness real writes, so either winner is still correct under `at_least_as_fresh`.
 
 ### Opting out of the upgrade
 
